@@ -4,8 +4,8 @@ import requests
 import xml.etree.ElementTree as ElementTree
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import utils
-from module_settings import CONFIG_DIR, ROOT_DIR, LOG_DIR
+import base.common
+from global_env import CONFIG_DIR, DATA_ROOT, LOG_DIR
 
 # --------------------------------------------------------------------------------------------
 def get_quarter(period_end):
@@ -17,6 +17,12 @@ def get_quarter(period_end):
     else:
         fy = '%s-%d' % (period_end[0:4], int(period_end[0:4])+1)
     return '%s-%s-%s' % (fy[0:4], fy[7:], qtr)
+
+
+def fr_meta_data_files(exchange):
+    META_DATA_DB = DATA_ROOT + f'/02_ind_cf/{exchange}_fr_metadata.csv'
+    ERRORS_DB    = DATA_ROOT + f'/02_ind_cf/{exchange}_fr_errors.csv'
+    return META_DATA_DB, ERRORS_DB
 
 
 def parse_fr_xml_string(xml_content_str):
@@ -36,20 +42,16 @@ def parse_fr_xml_string(xml_content_str):
             idx = df[(df['tag'] == tag) & (df['context'] == context)].index[0]
             df.at[idx, 'value'] = item.text
 
-    if df['tag'].str.contains('ISIN').any():
-        ISIN = df.loc[df['tag'] == 'ISIN', 'value'].values[0]
-    else:
-        ISIN = 'not-found'
+    def get_value(tag_value, value_if_not_found='not-found'):
+        return df.loc[df['tag'] == tag_value, 'value'].values[0] \
+            if df['tag'].str.contains(tag_value).any() else value_if_not_found
 
-    if df['tag'].str.contains('Symbol').any():
-        nse_symbol = df.loc[df['tag'] == 'Symbol', 'value'].values[0]
-    else:
-        nse_symbol = 'not-found'
-
-    if df['tag'].str.contains('ScripCode').any():
-        bse_code = df.loc[df['tag'] == 'ScripCode', 'value'].values[0]
-    else:
-        bse_code = 'not-found'
+    ISIN         = get_value('ISIN')
+    nse_symbol   = get_value('Symbol')
+    bse_code     = get_value('ScripCode')
+    period_start = get_value('DateOfStartOfReportingPeriod')
+    period_end   = get_value('DateOfEndOfReportingPeriod')
+    result_type  = get_value('NatureOfReportStandaloneConsolidated')
 
     if df['tag'].str.contains('ResultType').any():
         result_format = df.loc[df['tag'] == 'ResultType', 'value'].values[0]
@@ -62,15 +64,6 @@ def parse_fr_xml_string(xml_content_str):
         company_name = df.loc[df['tag'].str.startswith('NameOf'), 'value'].values[0]
     else:
         company_name = nse_symbol
-
-    result_type = df.loc[df['tag'] == 'NatureOfReportStandaloneConsolidated', 'value'].values[0]
-
-    if df['tag'].str.contains('DateOfStartOfReportingPeriod').any():
-        period_start = df.loc[df['tag'] == 'DateOfStartOfReportingPeriod', 'value'].values[0]
-    else:
-        period_start = 'not-found'
-
-    period_end = df.loc[df['tag'] == 'DateOfEndOfReportingPeriod', 'value'].values[0]
 
     result = {
         'outcome': True,
@@ -90,8 +83,8 @@ def parse_fr_xml_string(xml_content_str):
     return result
 
 
-def download_xbrl_fr(exchange, url, verbose=False):
-    request_header = utils.http_request_header()
+def download_xbrl_fr(url, verbose=False):
+    request_header = base.common.http_request_header()
     # print('REQUEST HEADER:', request_header)
 
     response = requests.get(url, headers=request_header)
@@ -122,12 +115,11 @@ def pre_fill_template(xbrl_content):
             val = raw_df.loc[(raw_df['context'] == context) &
                              (raw_df['tag'] == tag), 'value'].values[0]
         except Exception as e:
-            val = 'not found'
+            val = 'not-found'
         return val
 
     template_name = 'banking' if result_format == 'banking' else 'default'
-    template_df = pd.read_excel(CONFIG_DIR + '/fin_data_fr/1_fr_templates.xlsx',
-                                sheet_name=template_name)
+    template_df = pd.read_excel(CONFIG_DIR + '/1_fr_templates.xlsx', sheet_name=template_name)
 
     template_df[period] = '  '
     for idx, row in template_df.iterrows():
@@ -139,4 +131,10 @@ def pre_fill_template(xbrl_content):
 
 # ---------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    print('None for now')
+    url = 'https://www.bseindia.com/XBRLFILES/FourOneUploadDocument/' + \
+          'Main_Ind_As_532921_2552022163752.xml'
+    parsed_results = download_xbrl_fr(url)
+    [print(k, parsed_results[k])
+     for k in parsed_results.keys() if k != 'parsed_df' and k != 'xbrl_string']
+    df = pre_fill_template(parsed_results['xbrl_string'])
+    print(df.head().to_string(index=False))
