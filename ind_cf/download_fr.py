@@ -97,7 +97,7 @@ if __name__ == '__main__':
         verbose = False
         xbrl_url = row['XBRL Link']
 
-        print(base.common.progress_str(idx + 1, xbrl_urls_df.shape[0]), end='')
+        print(base.common.progress_str(idx + 1, xbrl_urls_df.shape[0]), end=''); sys.stdout.flush()
 
         if (idx + 2) % 100 == 1:
             time.sleep(1)

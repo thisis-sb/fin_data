@@ -1,6 +1,7 @@
 import os
 import gzip
 import pickle
+from global_env import LOG_DIR
 
 class Archiver:
     archive_name = None
@@ -60,7 +61,7 @@ class Archiver:
 
 # --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    archive_name = os.path.join(os.getenv('HOME_DIR'), '98_output_dir/test_archive')
+    archive_name = LOG_DIR + '/test_archive'
     ARCHIVE_SIZE = 1000000
 
     a1 = Archiver(archive_name, 'w', overwrite=True, compressed=True)
