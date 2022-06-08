@@ -33,7 +33,7 @@ def fetch_year_data(symbol, symbol_type, year, verbose=False):
         output_filename = OUTPUT_DIR + '/' + symbol + f'/{symbol}-{year}.csv'
         if not os.path.exists(os.path.dirname(output_filename)):
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-        df.to_csv(output_filename, index=False)
+        df.to_csv(output_filename)
         if verbose: print(df.shape[0], 'rows.')
     else:
         if verbose: print('no data.')

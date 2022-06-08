@@ -1,10 +1,14 @@
+# --------------------------------------------------------------------------------------------
+# Symbols for NSE indices & historic symbol changes
+# --------------------------------------------------------------------------------------------
+
 import pandas as pd
 from global_env import CONFIG_DIR
 
 def get_symbols(file_list, filter='EQ'):
     symbols = pd.DataFrame()
     for f in file_list:
-        df = pd.read_csv(CONFIG_DIR + f'/{f}.csv')
+        df = pd.read_csv(CONFIG_DIR + f'/2_nse_symbols/{f}.csv')
         if 'Group' in df.columns:
             df.rename(columns={'Group':'Series'}, inplace=True)
         symbols = pd.concat([symbols, df[['Series', 'Symbol']]])
@@ -13,7 +17,7 @@ def get_symbols(file_list, filter='EQ'):
     return symbols['Symbol'].unique()
 
 def get_symbol_changes():
-    df = pd.read_csv(CONFIG_DIR + '/nse_symbol_changes.csv')
+    df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/nse_symbol_changes.csv')
     df.columns = df.columns.str.replace(' ', '')
     df['Date'] = pd.to_datetime(df['SM_APPLICABLE_FROM'])
     df = df.loc[df['Date'] >= '2019-01-01'].reset_index(drop=True)
@@ -29,7 +33,3 @@ if __name__ == '__main__':
 
     sc_df = get_symbol_changes()
     print(sc_df.loc[sc_df['old'].isin(['CADILAHC', 'WABCOINDIA'])].to_string(index=False))
-
-    '''for symbol in ['BRITANNIA', 'KBCGLOBAL', 'RADIOCITY', 'IRCTC', 'MOTOGENFIN', 'MARINE']:
-        xx = get_corporate_actions(symbol)
-        print('%s\t%s' % (symbol, {'EX-DATE': list(xx['EX-DATE']), 'MULT': list(xx['MULT'])}))'''

@@ -59,6 +59,19 @@ class Archiver:
             self.mode = None
             self.compressed = None
 
+# temporary for legacy ------------------------
+STORED_AS_CSV = False
+
+def df_to_file(df, filename):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    if not STORED_AS_CSV:
+        df.to_parquet(filename + '.parquet', index=False, engine='pyarrow', compression='gzip')
+    else:
+        df.to_csv(filename, index=False)
+    return
+
+# temporary for legacy ------------------------
+
 # --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     archive_name = LOG_DIR + '/test_archive'

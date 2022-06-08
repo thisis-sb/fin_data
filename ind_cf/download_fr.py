@@ -27,7 +27,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         urls_df = pd.concat([pd.read_csv(f) for f in xbrl_files])
 
     if exchange == 'nse':
-        eql_df = pd.read_csv(CONFIG_DIR + '/EQUITY_L.csv')
+        eql_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
         eql_df.rename(columns={'NAME OF COMPANY':'COMPANY NAME'}, inplace=True)
         urls_df = pd.merge(urls_df, eql_df, on='COMPANY NAME', how='left')
         urls_df.rename(columns={'SYMBOL':'NSE Symbol', ' ISIN NUMBER':'ISIN', ' SERIES':'SERIES',
@@ -38,7 +38,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         [urls_df[col].fillna('ZZ', inplace=True)
          for col in ['NSE Symbol', 'ISIN', 'SERIES', 'COMPANY NAME']]
     elif exchange == 'bse':
-        nse_eql_df = pd.read_csv(CONFIG_DIR + '/EQUITY_L.csv')
+        nse_eql_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
         nse_eql_df.rename(columns={' ISIN NUMBER': 'ISIN',
                                    ' SERIES': 'SERIES',
                                    'NAME OF COMPANY':'COMPANY NAME'
