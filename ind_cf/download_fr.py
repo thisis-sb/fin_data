@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # xbrl_urls_df = xbrl_urls_df.head(5).reset_index(drop=True)
     # xbrl_urls_df = xbrl_urls_df[(xbrl_urls_df['NSE Symbol'].str.startswith('Z')) |
     #                            (xbrl_urls_df['NSE Symbol'].str.startswith('IC'))].reset_index()
-    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/urls_df.csv', index=False); exit()
+    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/ind_cf/urls_df.csv', index=False); exit()
     print(f'\nProcessing {xbrl_urls_df.shape[0]} files from {exchange} exchange :::')
     # exit()
 

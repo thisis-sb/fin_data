@@ -149,24 +149,24 @@ if __name__ == '__main__':
     index_files = [nse_symbols_file]
     nse_symbols = api.nse_symbols.get_symbols(index_files)
 
-    nse_eq_df = pd.read_csv(CONFIG_DIR + '/EQUITY_L.csv')
+    nse_eq_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
     nse_eq_df.rename(columns={'SYMBOL':'NSE Symbol', 'NAME OF COMPANY':'COMPANY NAME',
                               ' SERIES':'SERIES', ' ISIN NUMBER':'ISIN'}, inplace=True)
     nse_eq_df = nse_eq_df[['NSE Symbol', 'ISIN', 'SERIES', 'COMPANY NAME']].loc[
         nse_eq_df['NSE Symbol'].isin(nse_symbols)].reset_index(drop=True)
 
-    bse_eq_df = pd.read_csv(CONFIG_DIR + '/bse_codes.csv', index_col=False)
+    bse_eq_df = pd.read_csv(CONFIG_DIR + '/1_bse_codes/bse_codes.csv', index_col=False)
     bse_eq_df.rename(columns={'Security Code':'BSE Code', 'ISIN No':'ISIN'}, inplace=True)
     bse_eq_df['BSE Code'] = bse_eq_df['BSE Code'].astype(int)
     bse_eq_df = bse_eq_df[['BSE Code', 'ISIN', 'Sector Name', 'Industry', 'Group']]
-    # bse_eq_df.to_csv(LOG_DIR + '/bse_eq_df.csv', index=False); exit()
+    # bse_eq_df.to_csv(LOG_DIR + '/ind_cf/bse_eq_df.csv', index=False); exit()
 
     nse_eq_df = pd.merge(nse_eq_df, bse_eq_df, on='ISIN', how='left').reset_index(drop=True)
     nse_eq_df = nse_eq_df[['NSE Symbol', 'BSE Code', 'ISIN', 'SERIES', 'COMPANY NAME',
                            'Group', 'Sector Name', 'Industry']]
     nse_eq_df['BSE Code'] = nse_eq_df['BSE Code'].fillna(0)
     nse_eq_df['BSE Code'] = nse_eq_df['BSE Code'].astype(int)
-    nse_eq_df.to_csv(LOG_DIR + '/nse_eq_df.csv', index=False)  # ;exit()
+    nse_eq_df.to_csv(LOG_DIR + '/ind_cf/nse_eq_df.csv', index=False)  # ;exit()
 
     logging.disable(logging.INFO)
     web_driver = init_driver(None)
