@@ -119,7 +119,8 @@ def pre_fill_template(xbrl_content):
         return val
 
     template_name = 'banking' if result_format == 'banking' else 'default'
-    template_df = pd.read_excel(CONFIG_DIR + '/1_fr_templates.xlsx', sheet_name=template_name)
+    template_df = pd.read_excel(CONFIG_DIR + '/4_templates/1_fr_templates.xlsx',
+                                sheet_name=template_name)
 
     template_df[period] = '  '
     for idx, row in template_df.iterrows():

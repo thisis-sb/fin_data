@@ -47,6 +47,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         urls_df = pd.merge(urls_df, nse_eql_df, on='ISIN', how='left')
         # to do: cross-check NSE Symbol == SYMBOL
         urls_df = urls_df[['NSE Symbol', 'BSE Code', 'ISIN', 'COMPANY NAME', 'SERIES', 'XBRL Link']]
+        urls_df['PERIOD_ENDED'] = 'NA-temp-for-now'  # for now (fix in bse scraping later)
     else:
         assert False, 'Invalid Exchange'
 
@@ -58,6 +59,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
 if __name__ == '__main__':
     exchange = 'bse' if len(sys.argv) == 1 else sys.argv[1]
     redo_errors = False  # for now, set manually
+    n_to_download = 2500
 
     download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
@@ -157,6 +159,8 @@ if __name__ == '__main__':
                          }, index=[error_db_index])])
                 error_db_index = error_db_index + 1
                 n_errors = n_errors + 1
+        if n_downloaded > n_to_download:
+            break
     # ------------------------------------- end of for loop ------------------------------------
     print(f'\nAll {xbrl_urls_df.shape[0]} files processed, summarizing & saving results ...')
 
