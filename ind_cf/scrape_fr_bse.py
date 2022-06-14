@@ -141,7 +141,7 @@ def scrape_xbrl_links(security_code, n_rows, driver):
 
 # --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    nse_symbols_file = 'ind_nifty50list' if len(sys.argv) == 1 else sys.argv[1]
+    nse_symbols_file = 'ind_nifty500list' if len(sys.argv) == 1 else sys.argv[1]
     n_to_download = 101 if len(sys.argv) <= 2 else int(sys.argv[2])
     print('nse_symbols_file:', nse_symbols_file, 'n_to_download:', n_to_download)
 
