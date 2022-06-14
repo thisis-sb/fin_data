@@ -1,7 +1,7 @@
 import os
-import fin_data.base.common
+import common.utils as utils
 
-WIP              = fin_data.base.common.folder_suffix(False)
+WIP              = utils.folder_suffix(False)
 
 DATA_ROOT        = os.getenv('DATA_DIR') + f'/01_fin_data/{WIP}'
 CONFIG_DIR       = DATA_ROOT + f'/00_config'
