@@ -12,10 +12,10 @@ import time
 import pandas as pd
 import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import base.common
-import base.archiver
+import common.utils
+import common.archiver
 import base_utils
-from global_env import CONFIG_DIR, DATA_ROOT, LOG_DIR
+from settings import CONFIG_DIR, DATA_ROOT
 
 def get_fr_xbrl_urls(exchange, redo_errors=False):
     if redo_errors:
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
     OUT_DIR = DATA_ROOT + f'/02_ind_cf/{exchange}_fr_2'
-    xbrl_archive = base.archiver.Archiver(os.path.join(OUT_DIR, ARCHIVE_NAME), 'w')
+    xbrl_archive = common.archiver.Archiver(os.path.join(OUT_DIR, ARCHIVE_NAME), 'w')
 
     META_DATA_DB, ERRORS_DB = base_utils.fr_meta_data_files(exchange)
     if os.path.exists(META_DATA_DB):
@@ -94,12 +94,12 @@ if __name__ == '__main__':
     n_downloaded, n_skipped, n_errors = 0, 0, 0
     redone_errors = []
     meta_data_index, error_db_index = meta_data_df.shape[0], errors_df.shape[0]
-    base.common.time_since_last(0)
+    common.utils.time_since_last(0)
     for idx, row in xbrl_urls_df.iterrows():
         verbose = False
         xbrl_url = row['XBRL Link']
 
-        print(base.common.progress_str(idx + 1, xbrl_urls_df.shape[0]), end=''); sys.stdout.flush()
+        print(common.utils.progress_str(idx + 1, xbrl_urls_df.shape[0]), end=''); sys.stdout.flush()
 
         if (idx + 2) % 100 == 1:
             time.sleep(1)
@@ -164,6 +164,7 @@ if __name__ == '__main__':
     # ------------------------------------- end of for loop ------------------------------------
     print(f'\nAll {xbrl_urls_df.shape[0]} files processed, summarizing & saving results ...')
 
+    meta_data_df.sort_values(by=['NSE Symbol', 'SERIES', 'result_type', 'period'], inplace=True)
     meta_data_df.reset_index(drop=True, inplace=True)
 
     if redo_errors and len(redone_errors) > 0:
@@ -171,9 +172,9 @@ if __name__ == '__main__':
     errors_df.reset_index(drop=True, inplace=True)
 
     if n_downloaded > 0:
-        base.common.time_since_last(0)
+        common.utils.time_since_last(0)
         xbrl_archive.flush()
-        print(f'xbrl_archive.flush() took {base.common.time_since_last(0)} seconds')
+        print(f'xbrl_archive.flush() took {common.utils.time_since_last(0)} seconds')
 
     meta_data_df.drop_duplicates(inplace=True, ignore_index=True)
 

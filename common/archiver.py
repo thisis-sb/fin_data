@@ -1,7 +1,9 @@
 import os
+import sys
 import gzip
 import pickle
-from global_env import LOG_DIR
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from settings import LOG_DIR
 
 class Archiver:
     archive_name = None

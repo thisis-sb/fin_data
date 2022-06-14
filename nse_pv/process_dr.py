@@ -9,16 +9,16 @@ import glob
 import pandas as pd
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import base.archiver
-import base.common
+import common.archiver
+import common.utils
 import api.nse_symbols
-from global_env import DATA_ROOT
+from settings import DATA_ROOT
 
 SUB_PATH1 = '01_nse_pv/02_dr'
 SUB_PATH2 = os.path.join(SUB_PATH1, 'processed')
 
 def remove_existing_files(file_regex, verbose=False):
-    base.common.time_since_last(0); base.common.time_since_last(1)
+    common.utils.time_since_last(0); common.utils.time_since_last(1)
 
     files_to_remove = glob.glob(os.path.join(DATA_ROOT, SUB_PATH2, file_regex))
 
@@ -29,7 +29,7 @@ def remove_existing_files(file_regex, verbose=False):
         if verbose: print('No files to remove', end='. ')
 
     if verbose:
-        print('time check (remove files):', base.common.time_since_last(1), 'seconds', end='. ')
+        print('time check (remove files):', common.utils.time_since_last(1), 'seconds', end='. ')
     return
 
 def read_raw_files(path_regex, n_days=0, dr_type=None, verbose=False):
@@ -56,7 +56,7 @@ def read_raw_files(path_regex, n_days=0, dr_type=None, verbose=False):
     return df
 
 def pre_process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
-    base.common.time_since_last(0); base.common.time_since_last(1)
+    common.utils.time_since_last(0); common.utils.time_since_last(1)
 
     df = read_raw_files(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/fo*bhav.csv.zip'),
                         n_days=n_days, verbose=verbose)
@@ -71,7 +71,7 @@ def pre_process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
     }, inplace=True)
     df['Date'] = pd.to_datetime(df['Date'])
     df['Expiry Date'] = (pd.to_datetime(df['Expiry Date']))
-    if verbose: print('time check (load files):', base.common.time_since_last(1), 'seconds')
+    if verbose: print('time check (load files):', common.utils.time_since_last(1), 'seconds')
 
     print('Processing symbol changes ...')
     sc_df = api.nse_symbols.get_symbol_changes()
@@ -80,7 +80,7 @@ def pre_process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
         if xx.shape[0] > 0:
             print('  symbol: %s to %s' % (xx['old'].values[-1], symbol))
             df.loc[df['Symbol'] == xx['old'].values[-1], 'Symbol'] = symbol
-    if verbose: print('time check (symbol changes):', base.common.time_since_last(1), 'seconds')
+    if verbose: print('time check (symbol changes):', common.utils.time_since_last(1), 'seconds')
 
     all_symbols = sorted(df['Symbol'].unique())
     print(len(all_symbols), 'symbols found in raw data')
@@ -99,13 +99,13 @@ def pre_process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
         df_s.reset_index(drop=True, inplace=True)
         df_s['EMT'] = df_s.groupby(
             ['Date', 'Instrument', 'Strike Price', 'Option Type'])['Expiry Date'].apply(find_em)
-        base.archiver.df_to_file(
+        common.archiver.df_to_file(
             df_s, os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/fo_bhavcopy_{symbol}.csv'))
         if (idx+1) % 50 == 0: print(' ', idx+1, 'symbols processed')
 
     print(len(symbols_to_process), 'symbols processed. Done')
-    if verbose: print('time check (process files):', base.common.time_since_last(1), 'seconds')
-    print('time check (total time taken):', base.common.time_since_last(0), 'seconds')
+    if verbose: print('time check (process files):', common.utils.time_since_last(1), 'seconds')
+    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
 
     return
 
@@ -129,7 +129,7 @@ def get_52week_high_low(df):
     return
 
 def pre_process_cm_bhavcopy(year, symbols, filter=None, n_days=0, verbose=False):
-    base.common.time_since_last(0); base.common.time_since_last(1)
+    common.utils.time_since_last(0); common.utils.time_since_last(1)
 
     df  = read_raw_files(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/cm*bhav.csv.zip'),
                          n_days=n_days, verbose=verbose)
@@ -150,7 +150,7 @@ def pre_process_cm_bhavcopy(year, symbols, filter=None, n_days=0, verbose=False)
 
     df = df.merge(df2[['Date', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']],
                   on=['Date', 'Symbol', 'Series'], how='inner').reset_index(drop=True)
-    if verbose: print('time check (load files):', base.common.time_since_last(1), 'seconds')
+    if verbose: print('time check (load files):', common.utils.time_since_last(1), 'seconds')
 
     all_symbols = sorted(df['Symbol'].unique())
     print(len(all_symbols), 'symbols found in raw data')
@@ -162,19 +162,19 @@ def pre_process_cm_bhavcopy(year, symbols, filter=None, n_days=0, verbose=False)
         xx = sc_df.loc[sc_df['new'] == symbol]
         if xx.shape[0] > 0:
             df.loc[df['Symbol'] == xx['old'].values[-1], 'Symbol'] = symbol
-    if verbose: print('time check (symbol changes):', base.common.time_since_last(1), 'seconds')
+    if verbose: print('time check (symbol changes):', common.utils.time_since_last(1), 'seconds')
 
     if filter is not None: df = df.loc[df['Series'] == filter]
     df = df.loc[df['Symbol'].isin(symbols_to_process)]
     df['Date'] = pd.to_datetime(df['Date'], format="%Y-%m-%d")
     df = df.sort_values(by=['Symbol', 'Date']).reset_index(drop=False)
     if verbose: print(f'Done. {len(symbols_to_process)} processed. Data shape:', df.shape)
-    if verbose: print('time check (filtering):', base.common.time_since_last(1), 'seconds')
+    if verbose: print('time check (filtering):', common.utils.time_since_last(1), 'seconds')
 
     df = df[['Date', 'Symbol', 'Series', 'Open', 'High', 'Low', 'Close', 'Prev Close',
              'Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades',
              'Delivery Volume', 'Delivery Volume %']]
-    base.archiver.df_to_file(df, os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/cm_bhavcopy_all.csv'))
+    common.archiver.df_to_file(df, os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/cm_bhavcopy_all.csv'))
 
     dates_range = df['Date'].values
     first_date  = dates_range[0].astype('datetime64[D]')
@@ -186,7 +186,7 @@ def pre_process_cm_bhavcopy(year, symbols, filter=None, n_days=0, verbose=False)
           % (year, len(df['Symbol'].unique()), len(df['Date'].unique()), first_date, last_date,
              date_1yago.strftime('%Y-%m-%d')))
 
-    print('time check (total time taken):', base.common.time_since_last(0), 'seconds')
+    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
 
     return
 

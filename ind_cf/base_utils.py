@@ -4,8 +4,8 @@ import requests
 import xml.etree.ElementTree as ElementTree
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import base.common
-from global_env import CONFIG_DIR, DATA_ROOT, LOG_DIR
+import common.utils
+from settings import DATA_ROOT, LOG_DIR
 
 # --------------------------------------------------------------------------------------------
 def get_quarter(period_end):
@@ -55,6 +55,10 @@ def parse_fr_xml_string(xml_content_str):
 
     if df['tag'].str.contains('ResultType').any():
         result_format = df.loc[df['tag'] == 'ResultType', 'value'].values[0]
+        if result_format == 'Banking Format':
+            result_format = 'banking'
+        elif result_format == 'Main Format':
+            result_format = 'default'
     elif df['tag'].str.contains('NameOfBank').any(): # dirty
         result_format = 'banking'
     else:
@@ -84,7 +88,7 @@ def parse_fr_xml_string(xml_content_str):
 
 
 def download_xbrl_fr(url, verbose=False):
-    request_header = base.common.http_request_header()
+    request_header = common.utils.http_request_header()
     # print('REQUEST HEADER:', request_header)
 
     response = requests.get(url, headers=request_header)
@@ -100,36 +104,6 @@ def download_xbrl_fr(url, verbose=False):
 
     return parsed_result
 
-
-def pre_fill_template(xbrl_content):
-    parsed_result = parse_fr_xml_string(xbrl_content)
-    # if OK ...
-    period = parsed_result['period']
-    result_format = parsed_result['result_format']
-
-    raw_df = parsed_result['parsed_df']
-    # raw_df.to_csv(LOG_DIR + '/raw_df.csv', index=False)
-
-    def get_value(context, tag):
-        try:
-            val = raw_df.loc[(raw_df['context'] == context) &
-                             (raw_df['tag'] == tag), 'value'].values[0]
-        except Exception as e:
-            val = 'not-found'
-        return val
-
-    template_name = 'banking' if result_format == 'banking' else 'default'
-    template_df = pd.read_excel(CONFIG_DIR + '/4_templates/1_fr_templates.xlsx',
-                                sheet_name=template_name)
-
-    template_df[period] = '  '
-    for idx, row in template_df.iterrows():
-        if row['attribute type'] == 'xbrl data':
-            template_df.loc[idx, period] = get_value(row['xbrl context'], row['xbrl tag'])
-        elif row['attribute type'] == 'LINE_SEP':
-            template_df.loc[idx, period] = 'LINE_SEP'
-    return template_df
-
 # ---------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     url = 'https://www.bseindia.com/XBRLFILES/FourOneUploadDocument/' + \
@@ -137,5 +111,3 @@ if __name__ == '__main__':
     parsed_results = download_xbrl_fr(url)
     [print(k, parsed_results[k])
      for k in parsed_results.keys() if k != 'parsed_df' and k != 'xbrl_string']
-    df = pre_fill_template(parsed_results['xbrl_string'])
-    print(df.head().to_string(index=False))

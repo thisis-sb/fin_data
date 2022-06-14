@@ -2,8 +2,11 @@
 # Symbols for NSE indices & historic symbol changes
 # --------------------------------------------------------------------------------------------
 
+import os
+import sys
 import pandas as pd
-from global_env import CONFIG_DIR
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from settings import CONFIG_DIR
 
 def get_symbols(file_list, filter='EQ'):
     symbols = pd.DataFrame()
@@ -25,6 +28,18 @@ def get_symbol_changes():
     df.rename(columns={'SM_KEY_SYMBOL':'old', 'SM_NEW_SYMBOL':'new'}, inplace=True)
     return df[['Date', 'old', 'new']]
 
+def get_older_symbols(symbol):
+    sc_df = get_symbol_changes()
+    sc_df = sc_df.loc[sc_df['new'] == symbol].reset_index(drop=True)
+    return list(sc_df['old'].unique())
+
+def get_isin(symbol):
+    df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
+    df = df.loc[df['SYMBOL'] == symbol].reset_index(drop=True)
+    assert df.shape[0] == 1
+    return df[' ISIN NUMBER'].values[0]
+
+
 # ----------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     print('Testing nse_config ...')
@@ -33,3 +48,11 @@ if __name__ == '__main__':
 
     sc_df = get_symbol_changes()
     print(sc_df.loc[sc_df['old'].isin(['CADILAHC', 'WABCOINDIA'])].to_string(index=False))
+
+    old_syms = ['CADILAHC', 'WABCOINDIA']
+    new_syms = ['ZYDUSLIFE', 'ZFCVINDIA']
+    print('Old symbols:::')
+    [print(ns, ':', get_older_symbols(ns)) for ns in new_syms]
+
+    assert get_isin('ZYDUSLIFE') == 'INE010B01027'
+    print('All OK')

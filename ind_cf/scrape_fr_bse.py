@@ -20,7 +20,7 @@ import traceback
 import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import api.nse_symbols
-from global_env import DATA_ROOT, CONFIG_DIR, LOG_DIR
+from settings import DATA_ROOT, CONFIG_DIR, LOG_DIR
 
 # DRIVER_TYPE = 'Firefox'
 DRIVER_TYPE = 'Chrome'

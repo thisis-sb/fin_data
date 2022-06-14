@@ -8,17 +8,17 @@ import glob
 import pandas as pd
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import base.archiver
+import common.archiver
 import api.nse_cf_ca
 import api.nse_symbols
-import base.common
-from global_env import DATA_ROOT, LOG_DIR
+import common.utils
+from settings import DATA_ROOT, LOG_DIR
 
 class NseSpotPVData:
     def __init__(self, verbose=False):
         data_file = 'cm_bhavcopy_all.csv'
-        data_file = data_file if base.archiver.STORED_AS_CSV else data_file + '.parquet'
-        read_func = pd.read_csv if base.archiver.STORED_AS_CSV  else pd.read_parquet
+        data_file = data_file if common.archiver.STORED_AS_CSV else data_file + '.parquet'
+        read_func = pd.read_csv if common.archiver.STORED_AS_CSV  else pd.read_parquet
 
         data_files = glob.glob(
             os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed', f'**/{data_file}'))
@@ -117,7 +117,7 @@ class NseSpotPVData:
         return df
 
     def get_pv_data_multiple(self, symbols, series='EQ', from_to=None, n_days=0, verbose=False):
-        base.common.time_since_last(0)
+        common.utils.time_since_last(0)
 
         if self.pv_data is None: return None
 
@@ -153,7 +153,7 @@ class NseSpotPVData:
 
         if verbose:
             print(f'Done. {n_adj} adjusted')
-            print('time check (get_pv_data_multiple):', base.common.time_since_last(0), 'seconds\n')
+            print('time check (get_pv_data_multiple):', common.utils.time_since_last(0), 'seconds\n')
 
         return df_adj
 

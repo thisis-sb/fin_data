@@ -10,7 +10,7 @@ import pandas as pd
 import nsepy
 from time import sleep
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from global_env import DATA_ROOT
+from settings import DATA_ROOT
 
 OUTPUT_DIR     = DATA_ROOT + '/01_nse_pv/01_api'
 
