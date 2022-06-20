@@ -7,6 +7,7 @@ import sys
 import glob
 import pandas as pd
 from datetime import datetime
+from nsetools import Nse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.archiver
 import api.nse_cf_ca
@@ -157,6 +158,16 @@ class NseSpotPVData:
 
         return df_adj
 
+# --------------------------------------------------------------------------------------------
+# current spot prices
+spot_nse_obj = None
+def get_spot_quote(symbol, index=False):
+    global spot_nse_obj
+    if spot_nse_obj is None:
+        spot_nse_obj = Nse()
+    return spot_nse_obj.get_index_quote(symbol) if index else spot_nse_obj.get_quote(symbol)
+
+# --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     import numpy as np
     print(f'\nTesting {__file__} ...\n')
