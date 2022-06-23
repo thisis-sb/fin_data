@@ -91,9 +91,6 @@ class NseSpotPVData:
             ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
         )
 
-        # 52wk_h/l TBD/when --> get_52week_high_low(df1)
-        # df = self.get_52week_high_low(df)
-
         return df
 
     def get_pv_data_api(self, symbol, series='EQ', from_to=None, n_days=0):
@@ -108,6 +105,8 @@ class NseSpotPVData:
             date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
             date2 = datetime.strptime(from_to[1], '%Y-%m-%d')
             df = df.loc[(df.Date >= date1) & (df.Date <= date2)].reset_index(drop=True)
+        elif n_days != 0:
+            df = df.tail(n_days).reset_index(drop=True)
 
         df = self.adjust_for_corporate_actions(
             symbol, df,
@@ -117,7 +116,8 @@ class NseSpotPVData:
 
         return df
 
-    def get_pv_data_multiple(self, symbols, series='EQ', from_to=None, n_days=0, verbose=False):
+    def get_pv_data_multiple(self, symbols, series='EQ', from_to=None, n_days=0,
+                             get52wkhl=True, verbose=False):
         common.utils.time_since_last(0)
 
         if self.pv_data is None: return None
@@ -147,10 +147,14 @@ class NseSpotPVData:
                 ['Prev Close', 'Open', 'High', 'Low', 'Close'],
                 ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
             )
-            df1 = self.get_52week_high_low(df1)
+
+            if get52wkhl:
+                df1 = self.get_52week_high_low(df1)
+
             df_adj = df1 if df_adj is None else pd.concat([df_adj, df1], axis=0)
             n_adj += 1
-            if verbose and n_adj % 100 == 0: print(f'  {n_adj} adjusted')
+            if verbose and n_adj % 100 == 0:
+                print(f'  {n_adj} adjusted')
 
         if verbose:
             print(f'Done. {n_adj} adjusted')
