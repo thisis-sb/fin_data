@@ -13,7 +13,7 @@ import common.archiver
 import api.nse_cf_ca
 import api.nse_symbols
 import common.utils
-from settings import DATA_ROOT, LOG_DIR
+from fin_data.settings import DATA_ROOT, LOG_DIR
 
 class NseSpotPVData:
     def __init__(self, verbose=False):
@@ -207,6 +207,15 @@ if __name__ == '__main__':
         assert np.where(df1['Delivery Volume'] != df2['Deliverable Volume'])[0].shape[0] <= 1, \
             diag(df1, df1['Delivery Volume %'], df2['Deliverable Volume'])
         print(' all OK')
+
+    print('\nTesting NseSpotPVData().get_pv_data_multiple ...', end='')
+    multi_df = NseSpotPVData(). \
+        get_pv_data_multiple(symbols=['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC',
+                                      'JUBLFOOD', 'ZYDUSLIFE'],
+                             n_days=21, get52wkhl=False). \
+        sort_values(by=['Date', 'Symbol'])
+    print('Done.', multi_df.shape, len(multi_df['Symbol'].unique()))
+    exit()  # for now
 
     print('\nTesting get_pv_data_multiple ...')
     symbols = api.nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])

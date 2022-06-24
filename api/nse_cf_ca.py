@@ -8,7 +8,7 @@ import sys
 import pandas as pd
 import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from settings import CONFIG_DIR
+from fin_data.settings import CONFIG_DIR
 
 def get_corporate_actions(symbol):
     ca_files = glob.glob(os.path.join(CONFIG_DIR, '03_nse_cf_ca/CF-CA-*.csv'))

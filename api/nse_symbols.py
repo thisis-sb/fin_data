@@ -6,7 +6,7 @@ import os
 import sys
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from settings import CONFIG_DIR
+from fin_data.settings import CONFIG_DIR
 
 MODULE = '02_nse_symbols'
 
