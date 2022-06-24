@@ -8,10 +8,12 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from settings import CONFIG_DIR
 
+MODULE = '02_nse_symbols'
+
 def get_symbols(file_list, filter='EQ'):
     symbols = pd.DataFrame()
     for f in file_list:
-        df = pd.read_csv(CONFIG_DIR + f'/2_nse_symbols/{f}.csv')
+        df = pd.read_csv(CONFIG_DIR + f'/{MODULE}/{f}.csv')
         if 'Group' in df.columns:
             df.rename(columns={'Group':'Series'}, inplace=True)
         symbols = pd.concat([symbols, df[['Series', 'Symbol']]])
@@ -20,7 +22,7 @@ def get_symbols(file_list, filter='EQ'):
     return symbols['Symbol'].unique()
 
 def get_symbol_changes():
-    df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/nse_symbol_changes.csv')
+    df = pd.read_csv(CONFIG_DIR + f'/{MODULE}/nse_symbol_changes.csv')
     df.columns = df.columns.str.replace(' ', '')
     df['Date'] = pd.to_datetime(df['SM_APPLICABLE_FROM'])
     df = df.loc[df['Date'] >= '2019-01-01'].reset_index(drop=True)
@@ -34,7 +36,7 @@ def get_older_symbols(symbol):
     return list(sc_df['old'].unique())
 
 def get_isin(symbol):
-    df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
+    df = pd.read_csv(CONFIG_DIR + f'/{MODULE}/EQUITY_L.csv')
     df = df.loc[df['SYMBOL'] == symbol].reset_index(drop=True)
     assert df.shape[0] == 1
     return df[' ISIN NUMBER'].values[0]

@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from settings import CONFIG_DIR
 
 def get_corporate_actions(symbol):
-    ca_files = glob.glob(os.path.join(CONFIG_DIR, '3_nse_cf_ca/CF-CA-*.csv'))
+    ca_files = glob.glob(os.path.join(CONFIG_DIR, '03_nse_cf_ca/CF-CA-*.csv'))
     ca_df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
     # ca_df.to_csv(os.getenv('HOME_DIR') + '/98_output_dir/fin_data/df.csv', index=False)
 

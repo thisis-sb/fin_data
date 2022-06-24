@@ -17,17 +17,20 @@ import common.archiver
 import base_utils
 from settings import CONFIG_DIR, DATA_ROOT
 
+MODULE = '02_ind_cf'
+CONFIG_SYM = '02_nse_symbols'
+
 def get_fr_xbrl_urls(exchange, redo_errors=False):
     if redo_errors:
         ERRORS_DB = base_utils.fr_meta_data_files(exchange)[1]
         assert os.path.exists(ERRORS_DB), f'{ERRORS_DB} does not exist'
         urls_df = pd.read_csv(ERRORS_DB)
     else:
-        xbrl_files = glob.glob(DATA_ROOT + f'/02_ind_cf/{exchange}_fr_1/scrape_results_*.csv')
+        xbrl_files = glob.glob(DATA_ROOT + f'/{MODULE}/{exchange}_fr_1/scrape_results_*.csv')
         urls_df = pd.concat([pd.read_csv(f) for f in xbrl_files])
 
     if exchange == 'nse':
-        eql_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
+        eql_df = pd.read_csv(CONFIG_DIR + f'/{CONFIG_SYM}/EQUITY_L.csv')
         eql_df.rename(columns={'NAME OF COMPANY':'COMPANY NAME'}, inplace=True)
         urls_df = pd.merge(urls_df, eql_df, on='COMPANY NAME', how='left')
         urls_df.rename(columns={'SYMBOL':'NSE Symbol', ' ISIN NUMBER':'ISIN', ' SERIES':'SERIES',
@@ -38,7 +41,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         [urls_df[col].fillna('ZZ', inplace=True)
          for col in ['NSE Symbol', 'ISIN', 'SERIES', 'COMPANY NAME']]
     elif exchange == 'bse':
-        nse_eql_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
+        nse_eql_df = pd.read_csv(CONFIG_DIR + f'/{CONFIG_SYM}/EQUITY_L.csv')
         nse_eql_df.rename(columns={' ISIN NUMBER': 'ISIN',
                                    ' SERIES': 'SERIES',
                                    'NAME OF COMPANY':'COMPANY NAME'
@@ -63,7 +66,7 @@ if __name__ == '__main__':
 
     download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
-    OUT_DIR = DATA_ROOT + f'/02_ind_cf/{exchange}_fr_2'
+    OUT_DIR = DATA_ROOT + f'/{MODULE}/{exchange}_fr_2'
     xbrl_archive = common.archiver.Archiver(os.path.join(OUT_DIR, ARCHIVE_NAME), 'w')
 
     META_DATA_DB, ERRORS_DB = base_utils.fr_meta_data_files(exchange)
@@ -87,7 +90,8 @@ if __name__ == '__main__':
     # xbrl_urls_df = xbrl_urls_df.head(5).reset_index(drop=True)
     # xbrl_urls_df = xbrl_urls_df[(xbrl_urls_df['NSE Symbol'].str.startswith('Z')) |
     #                            (xbrl_urls_df['NSE Symbol'].str.startswith('IC'))].reset_index()
-    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/ind_cf/urls_df.csv', index=False); exit()
+    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/ind_cf/urls_df.csv', index=False)
+    # exit()
     print(f'\nProcessing {xbrl_urls_df.shape[0]} files from {exchange} exchange :::')
     # exit()
 

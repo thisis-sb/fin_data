@@ -149,13 +149,13 @@ if __name__ == '__main__':
     index_files = [nse_symbols_file]
     nse_symbols = api.nse_symbols.get_symbols(index_files)
 
-    nse_eq_df = pd.read_csv(CONFIG_DIR + '/2_nse_symbols/EQUITY_L.csv')
+    nse_eq_df = pd.read_csv(CONFIG_DIR + '/02_nse_symbols/EQUITY_L.csv')
     nse_eq_df.rename(columns={'SYMBOL':'NSE Symbol', 'NAME OF COMPANY':'COMPANY NAME',
                               ' SERIES':'SERIES', ' ISIN NUMBER':'ISIN'}, inplace=True)
     nse_eq_df = nse_eq_df[['NSE Symbol', 'ISIN', 'SERIES', 'COMPANY NAME']].loc[
         nse_eq_df['NSE Symbol'].isin(nse_symbols)].reset_index(drop=True)
 
-    bse_eq_df = pd.read_csv(CONFIG_DIR + '/1_bse_codes/bse_codes.csv', index_col=False)
+    bse_eq_df = pd.read_csv(CONFIG_DIR + '/01_bse_codes/bse_codes.csv', index_col=False)
     bse_eq_df.rename(columns={'Security Code':'BSE Code', 'ISIN No':'ISIN'}, inplace=True)
     bse_eq_df['BSE Code'] = bse_eq_df['BSE Code'].astype(int)
     bse_eq_df = bse_eq_df[['BSE Code', 'ISIN', 'Sector Name', 'Industry', 'Group']]
