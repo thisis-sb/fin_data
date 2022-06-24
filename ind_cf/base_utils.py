@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ElementTree
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.utils
-from settings import DATA_ROOT, LOG_DIR
+from fin_data.settings import DATA_ROOT, LOG_DIR
 
 # --------------------------------------------------------------------------------------------
 def get_quarter(period_end):
