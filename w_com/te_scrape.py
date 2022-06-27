@@ -70,7 +70,7 @@ if __name__ == '__main__':
                            parsed_result['parsed_df']['date'].astype(str).values[-1]
                            ))
         assert row['full_name'] == parsed_result['full_name'], \
-            'full_name not matching %s/%s' % (row['full name'], parsed_result['full_name'])
+            'full_name not matching %s/%s' % (row['full_name'], parsed_result['full_name'])
 
         full_data_df = pd.concat([full_data_df, parsed_result['parsed_df']])
 
