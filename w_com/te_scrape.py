@@ -11,11 +11,11 @@ from settings import CONFIG_DIR, DATA_ROOT
 
 MODULE = '06_w_com'
 
-def get_hist(symbol, category, year, verbose=False):
+def get_hist(symbol, category, year, auth_key_str, verbose=False):
     d1, d2 = f'{year}-01-01', f'{year}-12-31'
     url1 = 'https://markets.tradingeconomics.com/chart?s=%s' % symbol
     url2 = '&d1=%s&d2=%s&interval=1d&securify=new&url=%s' % (d1, d2, category)
-    url3 = '&AUTH=vYBn7PlsPR6IitxFXBIjCJ%2FUtI0%2Bs3EmOs4%2FNhC81V6ZNEIIuCBwoEYjWko7erlG'
+    url3 = f'&AUTH={auth_key_str}'
     url4 = '&ohlc=0'
     url = url1 + url2 + url3 + url4
     if verbose: print('url:[%s]' % url)
@@ -53,19 +53,23 @@ if __name__ == '__main__':
     symbols_df = pd.read_excel(CONFIG_DIR + f'/{MODULE}/symbols.xlsx', sheet_name='tradingeconomics')
     symbols_df.dropna(inplace=True)
     symbols_df.reset_index(drop=True)
+    auth_key_df = pd.read_excel(CONFIG_DIR + f'/{MODULE}/symbols.xlsx', sheet_name='auth')
+    auth_key_str = auth_key_df.loc[auth_key_df['source'] == 'tradingeconomics']['auth_key'].values[0]
 
     full_data_df = pd.DataFrame()
     for idx, row in symbols_df.iterrows():
-        print('%s:' % row['full name'], end=' ')
+        print('%s:' % row['full_name'], end=' ')
         sys.stdout.flush()
-        parsed_result = get_hist(row['symbol'], row['category'], year, verbose=False)
+        parsed_result = get_hist(row['symbol'], row['category'], year,
+                                 auth_key_str=auth_key_str, verbose=False)
         if parsed_result is None:
             print('No data found')
             continue
-        print('%d / %s' % (parsed_result['parsed_df'].shape[0],
+        print('%d / (%s - %s)' % (parsed_result['parsed_df'].shape[0],
+                           parsed_result['parsed_df']['date'].astype(str).values[0],
                            parsed_result['parsed_df']['date'].astype(str).values[-1]
                            ))
-        assert row['full name'] == parsed_result['full_name'], \
+        assert row['full_name'] == parsed_result['full_name'], \
             'full_name not matching %s/%s' % (row['full name'], parsed_result['full_name'])
 
         full_data_df = pd.concat([full_data_df, parsed_result['parsed_df']])
