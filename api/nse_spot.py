@@ -24,7 +24,6 @@ class NseSpotPVData:
         data_files = glob.glob(
             os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed', f'**/{data_file}'))
         self.pv_data = pd.concat([read_func(f) for f in data_files])
-        # self.pv_data = read_func(os.path.join(raw_data_path, data_file))
         self.pv_data['Date'] = pd.to_datetime(self.pv_data['Date'], format="%Y-%m-%d")
 
         if verbose:
@@ -93,7 +92,7 @@ class NseSpotPVData:
 
         return df
 
-    def get_pv_data_api(self, symbol, series='EQ', from_to=None, n_days=0):
+    def get_pv_data_api(self, symbol, after=None, from_to=None, n_days=0):
         csv_files = glob.glob(os.path.join(DATA_ROOT, '01_nse_pv/01_api', f'{symbol}/*.csv'))
         if len(csv_files) == 0: return pd.DataFrame()
         df = pd.concat([pd.read_csv(f) for f in csv_files], axis=0)
@@ -101,7 +100,9 @@ class NseSpotPVData:
         df.drop_duplicates(inplace=True)
         df = df.sort_values(by='Date').reset_index(drop=True)
 
-        if from_to is not None:
+        if after is not None:
+            df = df.loc[df['Date'] >= datetime.strptime(after, '%Y-%m-%d')]
+        elif from_to is not None:
             date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
             date2 = datetime.strptime(from_to[1], '%Y-%m-%d')
             df = df.loc[(df.Date >= date1) & (df.Date <= date2)].reset_index(drop=True)
@@ -116,7 +117,7 @@ class NseSpotPVData:
 
         return df
 
-    def get_pv_data_multiple(self, symbols, series='EQ', from_to=None, n_days=0,
+    def get_pv_data_multiple(self, symbols, series='EQ', after=None, from_to=None, n_days=0,
                              get52wkhl=True, verbose=False):
         common.utils.time_since_last(0)
 
@@ -133,7 +134,9 @@ class NseSpotPVData:
         for symbol in df['Symbol'].unique():
             df1 = df.loc[df['Symbol'] == symbol].reset_index(drop=True)
 
-            if from_to is not None:
+            if after is not None:
+                df1 = df1.loc[df1['Date'] >= datetime.strptime(after, '%Y-%m-%d')]
+            elif from_to is not None:
                 date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
                 date2 = datetime.strptime(from_to[1], '%Y-%m-%d')
                 df1 = df1.loc[(df1['Date'] >= date1) & (df1['Date'] <= date2)]
@@ -155,6 +158,9 @@ class NseSpotPVData:
             n_adj += 1
             if verbose and n_adj % 100 == 0:
                 print(f'  {n_adj} adjusted')
+
+        df_adj.reset_index(inplace=True)
+        df_adj.reset_index(drop=True, inplace=True)
 
         if verbose:
             print(f'Done. {n_adj} adjusted')
@@ -210,9 +216,8 @@ if __name__ == '__main__':
 
     print('\nTesting NseSpotPVData().get_pv_data_multiple ...', end='')
     multi_df = NseSpotPVData(). \
-        get_pv_data_multiple(symbols=['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC',
-                                      'JUBLFOOD', 'ZYDUSLIFE'],
-                             n_days=21, get52wkhl=False). \
+        get_pv_data_multiple(symbols=symbols,
+                             from_to=['2021-07-01', '2022-06-30'], get52wkhl=True). \
         sort_values(by=['Date', 'Symbol'])
     print('Done.', multi_df.shape, len(multi_df['Symbol'].unique()))
     exit()  # for now
