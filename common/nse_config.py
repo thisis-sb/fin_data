@@ -24,11 +24,18 @@ if __name__ == '__main__':
         df.to_csv(CONFIG_DIR + f'/02_nse_symbols/{os.path.basename(url)}', index=False)
         print('Done, shape:', df.shape)
 
-    # 1. NSE symbol changes
+    # 2. NSE symbol changes
     print('Downloading nse_symbolchanges.csv', end=' ... ')
     nse_symbol_changes_url = 'https://archives.nseindia.com/content/equities/symbolchange.csv'
     df = pd.read_csv(nse_symbol_changes_url, encoding='cp1252')
     df.to_csv(CONFIG_DIR + '/02_nse_symbols/nse_symbol_changes.csv', index=False)
+    print('Done, shape:', df.shape)
+
+    # 3. FO market lots
+    print('Downloading fo_mktlots.csv', end=' ... ')
+    nse_symbol_changes_url = 'https://archives.nseindia.com/content/fo/fo_mktlots.csv'
+    df = pd.read_csv(nse_symbol_changes_url, encoding='cp1252')
+    df.to_csv(CONFIG_DIR + '/02_nse_symbols/fo_mktlots.csv', index=False)
     print('Done, shape:', df.shape)
 
     # TO DO: BSE_CODES
