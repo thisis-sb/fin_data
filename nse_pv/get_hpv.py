@@ -89,7 +89,7 @@ if __name__ == '__main__':
     verbose = False
     download_type = 'ytd' if len(sys.argv) == 1 else sys.argv[1]
     symbols = sys.argv[2:] if len(sys.argv) > 2 else\
-        ['NIFTY 50.IDX', 'NIFTY BANK.IDX', 'NIFTY 500.IDX', 'NIFTY TOTAL MARKET.IDX',
+        ['NIFTY 50.IDX', 'NIFTY BANK.IDX', 'NIFTY 500.IDX',
          'ASIANPAINT.EQ', 'BRITANNIA.EQ', 'HDFC.EQ', 'ICICIBANK.EQ', 'IRCTC.EQ', 'JUBLFOOD.EQ',
          'ZYDUSLIFE.EQ', 'PAYTM.EQ']
 
