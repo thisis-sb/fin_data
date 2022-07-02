@@ -194,8 +194,8 @@ if __name__ == '__main__':
         print(f'Testing for {symbol} ...', end=' ')
         df1 = nse_pvdata.get_pv_data(symbol, from_to=['2021-01-01', '2022-03-31'])
         df2 = nse_pvdata.get_pv_data_api(symbol, from_to=['2021-01-01', '2022-03-31'])
-        df1.to_csv(os.path.join(LOG_DIR, 'nse_pv/df1.csv'), index=False)
-        df2.to_csv(os.path.join(LOG_DIR, 'nse_pv/df2.csv'), index=False)
+        df1.to_csv(os.path.join(LOG_DIR, 'nse_spot_df1.csv'), index=False)
+        df2.to_csv(os.path.join(LOG_DIR, 'nse_spot_df2.csv'), index=False)
         assert df1.shape[0] == df2.shape[0], "%d / %d" % (df1.shape[0], df2.shape[0])
         assert np.where(df1['Open']         != df2['Open'])[0].shape[0] == 0
         assert np.where(df1['High']         != df2['High'])[0].shape[0] == 0

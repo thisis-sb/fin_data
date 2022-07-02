@@ -55,7 +55,7 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         assert False, 'Invalid Exchange'
 
     urls_df.reset_index(drop=True, inplace=True)
-    # print(urls_df.head()); urls_df.to_csv(LOG_DIR + '/ind_cf/urls_df.csv', index=False);exit()
+    # print(urls_df.head()); urls_df.to_csv(LOG_DIR + '/download_fr_urls_df.csv', index=False);exit()
     return urls_df
 
 # --------------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # xbrl_urls_df = xbrl_urls_df.head(5).reset_index(drop=True)
     # xbrl_urls_df = xbrl_urls_df[(xbrl_urls_df['NSE Symbol'].str.startswith('Z')) |
     #                            (xbrl_urls_df['NSE Symbol'].str.startswith('IC'))].reset_index()
-    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/ind_cf/urls_df.csv', index=False)
+    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/download_fr_urls_df.csv', index=False)
     # exit()
     print(f'\nProcessing {xbrl_urls_df.shape[0]} files from {exchange} exchange :::')
     # exit()
