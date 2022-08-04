@@ -13,7 +13,7 @@ import common.archiver
 import api.nse_cf_ca
 import api.nse_symbols
 import common.utils
-from fin_data.settings import DATA_ROOT, LOG_DIR
+from settings import DATA_ROOT, LOG_DIR
 
 class NseSpotPVData:
     def __init__(self, verbose=False):
@@ -181,7 +181,8 @@ def get_spot_quote(symbol, index=False):
 if __name__ == '__main__':
     import numpy as np
     print(f'\nTesting {__file__} ...\n')
-    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'ZYDUSLIFE']
+    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC',
+               'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
 
     def diag(x, a, b):
         xx = (a-b).reset_index()

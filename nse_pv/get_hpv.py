@@ -12,7 +12,7 @@ from time import sleep
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from settings import DATA_ROOT
 
-OUTPUT_DIR     = DATA_ROOT + '/01_nse_pv/01_api'
+OUTPUT_DIR     = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
 
 # --------------------------------------------------------------------------------------------
 def fetch_year_data(symbol, symbol_type, year, verbose=False):
@@ -30,7 +30,7 @@ def fetch_year_data(symbol, symbol_type, year, verbose=False):
         assert False, "ERROR: Unknown option, ... exiting with error"
 
     if df.shape[0] > 0:
-        output_filename = OUTPUT_DIR + '/' + symbol + f'/{symbol}-{year}.csv'
+        output_filename = os.path.join(OUTPUT_DIR, symbol, f'{symbol}-{year}.csv')
         if not os.path.exists(os.path.dirname(output_filename)):
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         df.to_csv(output_filename)
@@ -62,7 +62,7 @@ def fetch_symbol_data(symbol, symbol_type, download_type, verbose=False):
 def download_all(symbols, download_type, verbose=False):
     if len(symbols) == 1 and symbols[0][-4:] == '.csv':
         csv_file = pd.read_csv(os.path.join(os.getenv('DATA_DIR'),
-                                            '00_config\\fin_data_symbols', symbols[0]))
+                                            '00_config/fin_data_symbols', symbols[0]))
         col_list = csv_file.columns.to_list()
         if 'Group' in col_list:
             symbol_list = list(csv_file['Symbol'] + '.' + csv_file['Group'])

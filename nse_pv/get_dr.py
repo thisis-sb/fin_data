@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.utils
 from settings import DATA_ROOT, NSE_ARCHIVES_URL
 
-OUTPUT_DIR     = DATA_ROOT + '/01_nse_pv/02_dr'
+OUTPUT_DIR     = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
 
 def nse_download_file(url, destination_filename):
     r = requests.get(url, headers=common.utils.http_request_header(), stream=True)
@@ -145,7 +145,7 @@ def nse_download_daily_reports(year_str, month_str, report_type, verbose=False):
     return
 
 if __name__ == '__main__':
-    months = ['JUN2022'] if len(sys.argv) == 1 else sys.argv[1:]
+    months = ['AUG2022'] if len(sys.argv) == 1 else sys.argv[1:]
 
     for m in months:
         assert m[0:3] in ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',

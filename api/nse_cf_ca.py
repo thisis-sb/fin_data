@@ -8,7 +8,7 @@ import sys
 import pandas as pd
 import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from fin_data.settings import CONFIG_DIR
+from settings import CONFIG_DIR
 
 def get_corporate_actions(symbol):
     ca_files = glob.glob(os.path.join(CONFIG_DIR, '03_nse_cf_ca/CF-CA-*.csv'))
@@ -47,6 +47,6 @@ def get_corporate_actions(symbol):
 
 if __name__ == '__main__':
     for symbol in ['BRITANNIA', 'KBCGLOBAL', 'RADIOCITY', 'IRCTC', 'MOTOGENFIN', 'MARINE',
-                   'AVANTIFEED']:
+                   'AVANTIFEED', 'TATASTEEL']:
         xx = get_corporate_actions(symbol)
         print('%s\t%s' %(symbol, {'EX-DATE':list(xx['EX-DATE']), 'MULT':list(xx['MULT'])}))
