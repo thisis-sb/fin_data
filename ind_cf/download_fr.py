@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.utils
 import common.archiver
 import base_utils
-from settings import CONFIG_DIR, DATA_ROOT
+from settings import CONFIG_DIR, DATA_ROOT, LOG_DIR
 
 MODULE = '02_ind_cf'
 CONFIG_SYM = '02_nse_symbols'
@@ -26,7 +26,8 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
         assert os.path.exists(ERRORS_DB), f'{ERRORS_DB} does not exist'
         urls_df = pd.read_csv(ERRORS_DB)
     else:
-        xbrl_files = glob.glob(DATA_ROOT + f'/{MODULE}/{exchange}_fr_1/scrape_results_*.csv')
+        files = 'scrape_results_*.csv' if exchange == 'bse' else 'CF-FR-*.csv'
+        xbrl_files = glob.glob(DATA_ROOT + f'/{MODULE}/{exchange}_fr_1/{files}')
         urls_df = pd.concat([pd.read_csv(f) for f in xbrl_files])
 
     if exchange == 'nse':
@@ -60,9 +61,9 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
 
 # --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    exchange = 'bse' if len(sys.argv) == 1 else sys.argv[1]
+    exchange = 'nse' if len(sys.argv) == 1 else sys.argv[1]
     redo_errors = False  # for now, set manually
-    n_to_download = 2500
+    n_to_download = 5000
 
     download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
@@ -90,7 +91,8 @@ if __name__ == '__main__':
     # xbrl_urls_df = xbrl_urls_df.head(5).reset_index(drop=True)
     # xbrl_urls_df = xbrl_urls_df[(xbrl_urls_df['NSE Symbol'].str.startswith('Z')) |
     #                            (xbrl_urls_df['NSE Symbol'].str.startswith('IC'))].reset_index()
-    # print(xbrl_urls_df.shape); xbrl_urls_df.to_csv(LOG_DIR + '/download_fr_urls_df.csv', index=False)
+    # print(xbrl_urls_df.shape);
+    xbrl_urls_df.to_csv(LOG_DIR + f'/{MODULE}/download_fr_urls_df.csv')
     # exit()
     print(f'\nProcessing {xbrl_urls_df.shape[0]} files from {exchange} exchange :::')
     # exit()
