@@ -45,8 +45,39 @@ def get_corporate_actions(symbol):
         ca_df.loc[idx, 'MULT'] = mult
     return ca_df[['SYMBOL', 'EX-DATE', 'MULT', 'PURPOSE']]
 
+def get_cf_ca_mult(symbol, dates_series):
+    res_df = pd.DataFrame({'Date':dates_series})
+    res_df['MULT'] = 1.0
+    res_df['DIV']  = 1.0
+    res_df['idx'] = res_df.index
+
+    ca_df = get_corporate_actions(symbol)
+    if ca_df.shape[0] == 0:
+        return res_df
+
+    def adj(df_row, date_idx, mult):
+        df_row['MULT'] = df_row['MULT'] / mult if df_row['idx'] < date_idx else df_row['MULT']
+        df_row['DIV']  = df_row['DIV'] * mult if df_row['idx'] < date_idx else df_row['DIV']
+        return df_row
+
+    for idx, cfca_row in ca_df.iterrows():
+        date_idx = res_df.index[res_df['Date'] == cfca_row['EX-DATE']]
+        if len(date_idx) != 0:
+            res_df = res_df.apply(lambda row: adj(row, date_idx[0], cfca_row['MULT']), axis=1)
+    res_df.drop(columns=['idx'], inplace=True)
+    return res_df
+
 if __name__ == '__main__':
     for symbol in ['BRITANNIA', 'KBCGLOBAL', 'RADIOCITY', 'IRCTC', 'MOTOGENFIN', 'MARINE',
                    'AVANTIFEED', 'TATASTEEL']:
         xx = get_corporate_actions(symbol)
         print('%s\t%s' %(symbol, {'EX-DATE':list(xx['EX-DATE']), 'MULT':list(xx['MULT'])}))
+
+    import nse_spot
+    for sym in ['TATASTEEL', 'RELIANCE']:
+        print()
+        df = nse_spot.NseSpotPVData().get_pv_data(symbol=sym,
+                                                  from_to=['2022-07-01', '2022-08-05'],
+                                                  adjust=False)
+        df = pd.merge(df, get_cf_ca_mult(sym, df['Date']), on='Date', how='left')
+        print(df[['Date', 'Close', 'Volume', 'MULT', 'DIV']].tail(10))

@@ -70,7 +70,7 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbol, series='EQ', from_to=None, n_days=0):
+    def get_pv_data(self, symbol, series='EQ', from_to=None, n_days=0, adjust=True):
         if self.pv_data is None: return None
 
         df = self.pv_data.loc[(self.pv_data['Symbol'] == symbol) &
@@ -84,11 +84,12 @@ class NseSpotPVData:
             n_days_act = n_days if n_days > 0 else df.shape[0]
             df = df.tail(n_days_act).reset_index(drop=True)
 
-        df = self.adjust_for_corporate_actions(
-            symbol, df,
-            ['Prev Close', 'Open', 'High', 'Low', 'Close'],
-            ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
-        )
+        if adjust:
+            df = self.adjust_for_corporate_actions(
+                symbol, df,
+                ['Prev Close', 'Open', 'High', 'Low', 'Close'],
+                ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
+            )
 
         return df
 
