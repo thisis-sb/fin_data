@@ -21,7 +21,6 @@ def get_hist(symbol, category, year, auth_key_str, verbose=False):
     if verbose: print('url:[%s]' % url)
 
     r = requests.get(url, headers=common.utils.http_request_header(), stream=True)
-    print('XXX', r.status_code)
     if not r.ok:
         raise ValueError('ERROR!', r.ok)
     data = r.json()
