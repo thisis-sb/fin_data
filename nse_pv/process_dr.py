@@ -210,6 +210,7 @@ if __name__ == '__main__':
     print('CM pre-processing START ...')
     # symbols = tst_syms
     symbols = list(api.nse_symbols.get_symbols(['ind_nifty500list',
-                                                'ind_niftymicrocap250_list', 'ind_my_custom_index']))
+                                                'ind_niftymicrocap250_list',
+                                                'ind_my_custom_index']))
     pre_process_cm_bhavcopy(year, symbols=symbols, filter='EQ', n_days=n_days, verbose=verbose)
     print('CM processing ... Done')

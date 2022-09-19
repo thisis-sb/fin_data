@@ -1,4 +1,6 @@
 import time
+import requests
+import json
 
 def folder_suffix(is_wip=False):
     return 'wip' if is_wip else ''
@@ -14,6 +16,24 @@ def http_request_header():
         "Accept-Language": "en-US,en;q=0.5"
         # , "Accept-Encoding": "gzip, deflate"
     }
+
+def http_get(url):
+    # request_header = http_request_header()
+    base_url = 'https://www.nseindia.com'
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
+                      'like Gecko) '
+                      'Chrome/80.0.3987.149 Safari/537.36',
+        'accept-language': 'en,gu;q=0.9,hi;q=0.8', 'accept-encoding': 'gzip, deflate, br'
+    }
+
+    session = requests.Session()
+    request = session.get(base_url, headers=headers, timeout=5)
+    cookies = dict(request.cookies)
+    response = session.get(url, headers=headers, timeout=5, cookies=cookies)
+    if response.status_code != 200:
+        raise ValueError('ERROR! http_get: code = %d, link = [%s]' % (response.status_code, url))
+    return json.loads(response.text)
 
 time_counters = [-1.0, -1.0, -1.0, -1.0, -1.0,]
 def time_since_last(time_id, precision=0):

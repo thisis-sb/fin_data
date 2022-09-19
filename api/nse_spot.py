@@ -172,7 +172,23 @@ class NseSpotPVData:
 # --------------------------------------------------------------------------------------------
 # current spot prices
 spot_nse_obj = None
-def get_spot_quote(symbol, index=False):
+def get_spot_quote(symbol, index=False, etf=False):
+    if etf:
+        url = 'https://www.nseindia.com/api/quote-equity?symbol=' + symbol
+        get_dict = common.utils.http_get(url)
+        # print(get_dict)
+        return {
+            'symbol':get_dict['info']['symbol'],
+            'Date': get_dict['metadata']['lastUpdateTime'][0:11],
+            'Open': get_dict['priceInfo']['open'],
+            'High': get_dict['priceInfo']['intraDayHighLow']['max'],
+            'Low': get_dict['priceInfo']['intraDayHighLow']['min'],
+            'Close': get_dict['priceInfo']['close'],
+            'previousClose': get_dict['priceInfo']['previousClose'],
+            'lastPrice': get_dict['priceInfo']['lastPrice'],
+            'pChange': get_dict['priceInfo']['pChange']
+        }
+
     global spot_nse_obj
     if spot_nse_obj is None:
         spot_nse_obj = Nse()
@@ -222,9 +238,15 @@ if __name__ == '__main__':
                              from_to=['2021-07-01', '2022-06-30'], get52wkhl=True). \
         sort_values(by=['Date', 'Symbol'])
     print('Done.', multi_df.shape, len(multi_df['Symbol'].unique()))
-    exit()  # for now
 
-    print('\nTesting get_pv_data_multiple ...')
+    # need to test this - doesn't work ...
+    '''print('\nTesting get_pv_data_multiple ...')
     symbols = api.nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])
     df = nse_pvdata.get_pv_data_multiple(symbols, n_days=252+252, verbose=True)
+    print('Done')'''
+
+    print('\nTesting get_spot_quote ...')
+    print(get_spot_quote('ICICITECH', etf=True))
+    print('Done')
+
     print('All Done')
