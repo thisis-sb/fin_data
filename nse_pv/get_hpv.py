@@ -1,8 +1,9 @@
-# --------------------------------------------------------------------------------------------
-# NSE Historical Price-Volume & Price-Ratios download
-# Usage: [full | ytd] [csv | symbols]
-# --------------------------------------------------------------------------------------------
+"""
+Download NSE Historical Price-Volume & Price-Ratios
+Usage: [full | ytd] [csv | symbols]
+"""
 
+''' -------------------------------------------------------------------------------------------- '''
 import datetime
 import os
 import sys
@@ -14,7 +15,7 @@ from settings import DATA_ROOT
 
 OUTPUT_DIR     = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
 
-# --------------------------------------------------------------------------------------------
+''' -------------------------------------------------------------------------------------------- '''
 def fetch_year_data(symbol, symbol_type, year, verbose=False):
     if verbose: print(f'  {symbol} for year {year}', end=' ')
     date_today_tokens = datetime.datetime.now().strftime('%Y-%m-%d').split('-')
@@ -42,7 +43,6 @@ def fetch_year_data(symbol, symbol_type, year, verbose=False):
 
     return df.shape[0], last_date
 
-# --------------------------------------------------------------------------------------------
 def fetch_symbol_data(symbol, symbol_type, download_type, verbose=False):
     print(f'{symbol} ({symbol_type} {download_type}): ', end=''); sys.stdout.flush()
     date_today_tokens = datetime.datetime.now().strftime('%Y-%m-%d').split('-')
@@ -58,7 +58,6 @@ def fetch_symbol_data(symbol, symbol_type, download_type, verbose=False):
     print(f'{n_rows} rows fetched, last_date = {last_date}')
     return
 
-# --------------------------------------------------------------------------------------------
 def download_all(symbols, download_type, verbose=False):
     if len(symbols) == 1 and symbols[0][-4:] == '.csv':
         csv_file = pd.read_csv(os.path.join(os.getenv('DATA_DIR'),
@@ -84,7 +83,7 @@ def download_all(symbols, download_type, verbose=False):
     print(f'\nData for {len(symbol_list)} symbols retrieved.')
     return
 
-# --------------------------------------------------------------------------------------------
+''' -------------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     verbose = False
     download_type = 'ytd' if len(sys.argv) == 1 else sys.argv[1]
