@@ -1,6 +1,7 @@
-# --------------------------------------------------------------------------------------------
-# API class for NSE spot PV data
-# --------------------------------------------------------------------------------------------
+"""
+API class & other methods for NSE spot PV data
+"""
+''' -------------------------------------------------------------------------------------------- '''
 
 import os
 import sys
@@ -9,21 +10,19 @@ import pandas as pd
 from datetime import datetime
 from nsetools import Nse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.archiver
-import api.nse_cf_ca
-import api.nse_symbols
+import common.nse_cf_ca
+import common.nse_symbols
 import common.utils
-from settings import DATA_ROOT, LOG_DIR
+import pygeneric.http_utils as http_utils
+from settings import DATA_ROOT, CONFIG_DIR, LOG_DIR
 
+''' -------------------------------------------------------------------------------------------- '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
-        data_file = 'cm_bhavcopy_all.csv'
-        data_file = data_file if common.archiver.STORED_AS_CSV else data_file + '.parquet'
-        read_func = pd.read_csv if common.archiver.STORED_AS_CSV  else pd.read_parquet
+        data_file = 'cm_bhavcopy_all.csv.parquet'
 
-        data_files = glob.glob(
-            os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed', f'**/{data_file}'))
-        self.pv_data = pd.concat([read_func(f) for f in data_files])
+        data_files = glob.glob(os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed', f'**/{data_file}'))
+        self.pv_data = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data['Date'] = pd.to_datetime(self.pv_data['Date'], format="%Y-%m-%d")
 
         if verbose:
@@ -61,7 +60,7 @@ class NseSpotPVData:
             return df_row
 
         df_raw['idx'] = df_raw.index
-        symbol_cfca = api.nse_cf_ca.get_corporate_actions(symbol)
+        symbol_cfca = common.nse_cf_ca.get_corporate_actions(symbol)
         for idx, cfca_row in symbol_cfca.iterrows():
             date_idx = df_raw.index[df_raw['Date'] == cfca_row['EX-DATE']]
             if len(date_idx) != 0:
@@ -169,13 +168,52 @@ class NseSpotPVData:
 
         return df_adj
 
-# --------------------------------------------------------------------------------------------
+''' -------------------------------------------------------------------------------------------- '''
+def get_index_pv(symbol, from_to=None):
+    md_idx = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_indices')
+    data_files = glob.glob(
+        os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed/**/index_bhavcopy_all.csv.parquet'))
+    df = pd.concat([pd.read_parquet(f) for f in data_files])
+    df = pd.merge(df, md_idx, on='Index Name', how='left')
+
+    if from_to is not None:
+        if from_to[1] is None:
+            df = df.loc[(df['Symbol'] == symbol) &
+                        (df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d'))]
+        else:
+            df = df.loc[(df['Symbol'] == symbol) &
+                        (df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d')) &
+                        (df['Date'] <= datetime.strptime(from_to[1], '%Y-%m-%d'))]
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+''' -------------------------------------------------------------------------------------------- '''
+def get_etf_pv(symbol=None, underlying=None, from_to=None):  # later on, series ETF/IDX/EQ
+    md_etf = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_etf')
+    data_files = glob.glob(
+        os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed/**/etf_bhavcopy_all.csv.parquet'))
+    df = pd.concat([pd.read_parquet(f) for f in data_files])
+    df = pd.merge(df, md_etf, on=['Symbol', 'SECURITY', 'UNDERLYING'], how='left')
+    # print(df.columns)
+
+    if from_to is not None:
+        if from_to[1] is None:
+            df = df.loc[(df['Underlying Symbol'] == underlying) &
+                        (df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d'))]
+        else:
+            df = df.loc[(df['Underlying Symbol'] == underlying) &
+                        (df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d')) &
+                        (df['Date'] <= datetime.strptime(from_to[1], '%Y-%m-%d'))]
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+''' -------------------------------------------------------------------------------------------- '''
 # current spot prices
 spot_nse_obj = None
-def get_spot_quote(symbol, index=False, etf=False):
-    if etf:
+def get_spot_quote(symbol, index=False):
+    if not index:
         url = 'https://www.nseindia.com/api/quote-equity?symbol=' + symbol
-        get_dict = common.utils.http_get(url)
+        get_dict = http_utils.http_get(url)
         # print(get_dict)
         return {
             'symbol':get_dict['info']['symbol'],
@@ -186,20 +224,32 @@ def get_spot_quote(symbol, index=False, etf=False):
             'Close': get_dict['priceInfo']['close'],
             'previousClose': get_dict['priceInfo']['previousClose'],
             'lastPrice': get_dict['priceInfo']['lastPrice'],
-            'pChange': get_dict['priceInfo']['pChange']
-        }
+            'pChange': round(get_dict['priceInfo']['pChange'], 2)
+        } if get_dict is not None else None
+    else:  # index
+        global spot_nse_obj
+        if spot_nse_obj is None:
+            spot_nse_obj = Nse()
+        get_dict = spot_nse_obj.get_index_quote(symbol)
+        # print(get_dict)
+        return {
+            'name': get_dict['name'],
+            'Date': None,
+            'Open': None,
+            'High': None,
+            'Low': None,
+            'Close': None,
+            'previousClose': None,
+            'lastPrice': get_dict['lastPrice'],
+            'pChange': round(float(get_dict['pChange']), 2)
+        } if get_dict is not None else None
 
-    global spot_nse_obj
-    if spot_nse_obj is None:
-        spot_nse_obj = Nse()
-    return spot_nse_obj.get_index_quote(symbol) if index else spot_nse_obj.get_quote(symbol)
-
-# --------------------------------------------------------------------------------------------
+''' -------------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     import numpy as np
     print(f'\nTesting {__file__} ...\n')
-    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC',
-               'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
+    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD',
+               'TATASTEEL', 'ZYDUSLIFE']
 
     def diag(x, a, b):
         xx = (a-b).reset_index()
@@ -240,13 +290,20 @@ if __name__ == '__main__':
     print('Done.', multi_df.shape, len(multi_df['Symbol'].unique()))
 
     # need to test this - doesn't work ...
-    '''print('\nTesting get_pv_data_multiple ...')
+    """print('\nTesting get_pv_data_multiple ...')
     symbols = api.nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])
     df = nse_pvdata.get_pv_data_multiple(symbols, n_days=252+252, verbose=True)
-    print('Done')'''
+    print('Done')"""
 
-    print('\nTesting get_spot_quote ...')
-    print(get_spot_quote('ICICITECH', etf=True))
+    print('\nTesting get_index_or_etf_pv ...')
+    print(get_index_pv('NIFTY 50', from_to=['2022-09-20', '2022-09-26'])[['Date', 'Symbol', 'Close']])
+    print(get_etf_pv(underlying='NIFTY 50', from_to=['2022-09-20', '2022-09-26'])['UNDERLYING'].unique())
     print('Done')
 
-    print('All Done')
+    print('\nTesting get_spot_quote ...')
+    print(get_spot_quote('HINDALCO'))
+    print(get_spot_quote('ICICITECH'))
+    print(get_spot_quote('NIFTY 50', index=True))
+    print('Done')
+
+    print('\nAll Done')

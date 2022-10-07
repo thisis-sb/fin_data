@@ -1,6 +1,4 @@
 import time
-import requests
-import json
 
 def folder_suffix(is_wip=False):
     return 'wip' if is_wip else ''
@@ -17,7 +15,7 @@ def http_request_header():
         # , "Accept-Encoding": "gzip, deflate"
     }
 
-def http_get(url):
+"""def http_get(url):
     # request_header = http_request_header()
     base_url = 'https://www.nseindia.com'
     headers = {
@@ -27,13 +25,24 @@ def http_get(url):
         'accept-language': 'en,gu;q=0.9,hi;q=0.8', 'accept-encoding': 'gzip, deflate, br'
     }
 
-    session = requests.Session()
-    request = session.get(base_url, headers=headers, timeout=5)
-    cookies = dict(request.cookies)
-    response = session.get(url, headers=headers, timeout=5, cookies=cookies)
-    if response.status_code != 200:
-        raise ValueError('ERROR! http_get: code = %d, link = [%s]' % (response.status_code, url))
-    return json.loads(response.text)
+    outcome, tries, err_list = False, 0, []
+    while not outcome and tries < 5:
+        try:
+            session = requests.Session()
+            request = session.get(base_url, headers=headers, timeout=5)
+            cookies = dict(request.cookies)
+            response = session.get(url, headers=headers, timeout=5, cookies=cookies)
+            if response.status_code == 200:
+                result_dict = json.loads(response.text)
+                session.close()
+                return result_dict
+            tries += 1
+            err_list.append('ERROR! http_get: code = %d, link = [%s]' % (response.status_code, url))
+        except Exception as e:
+            tries += 1
+            err_list.append('ERROR! Exception: [%s] [%s]' % (e, traceback.format_exc()))
+    print('Exhausted retries, http_get failed. Error list\n', err_list)
+    return None"""
 
 time_counters = [-1.0, -1.0, -1.0, -1.0, -1.0,]
 def time_since_last(time_id, precision=0):

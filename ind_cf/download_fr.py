@@ -61,9 +61,9 @@ def get_fr_xbrl_urls(exchange, redo_errors=False):
 
 # --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
-    exchange = 'nse' if len(sys.argv) == 1 else sys.argv[1]
+    n_to_download = 10000 if len(sys.argv) == 1 else int(sys.argv[1])
+    exchange = 'nse' if len(sys.argv) <= 2 else sys.argv[2]
     redo_errors = False  # for now, set manually
-    n_to_download = 5000
 
     download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
@@ -115,6 +115,21 @@ if __name__ == '__main__':
                 (not redo_errors and xbrl_url in erroneous_fr_files):
             '''print('XBRL file previously downloaded, skipping')'''
             n_skipped = n_skipped + 1
+            continue
+        elif os.path.basename(xbrl_url) == '-':
+            errors_df = pd.concat([
+                errors_df, pd.DataFrame(
+                    {'NSE Symbol': row['NSE Symbol'],
+                     'ISIN': row['ISIN'],
+                     'SERIES': row['SERIES'],
+                     'company_name': row['COMPANY NAME'],
+                     'period_end': row['PERIOD_ENDED'],
+                     'XBRL Link': xbrl_url,
+                     'error_msg': f'Empty/Invalid url for %s [-]' % row['NSE Symbol'],
+                     'traceback': None
+                     }, index=[error_db_index])])
+            error_db_index = error_db_index + 1
+            n_errors = n_errors + 1
             continue
 
         try:

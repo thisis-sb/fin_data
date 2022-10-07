@@ -5,7 +5,7 @@ import pickle
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from settings import LOG_DIR
 
-class Archiver:
+'''class Archiver:
     archive_name = None
     xbrl_dict = None
     mode = None
@@ -59,7 +59,7 @@ class Archiver:
             self.archive_name = None
             self.xbrl_dict = None
             self.mode = None
-            self.compressed = None
+            self.compressed = None'''
 
 # temporary for legacy ------------------------
 STORED_AS_CSV = False
@@ -74,7 +74,7 @@ def df_to_file(df, filename):
 
 # temporary for legacy ------------------------
 
-# --------------------------------------------------------------------------------------------
+"""# --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     archive_name = LOG_DIR + '/test_archive'
     ARCHIVE_SIZE = 1000000
@@ -105,4 +105,4 @@ if __name__ == '__main__':
     except:
         print('Test 5: OK')
 
-    print('All tests passed')
+    print('All tests passed')"""
