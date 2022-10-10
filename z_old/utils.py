@@ -1,9 +1,9 @@
 import time
 
-def folder_suffix(is_wip=False):
-    return 'wip' if is_wip else ''
+"""def folder_suffix(is_wip=False):
+    return 'wip' if is_wip else ''"""
 
-def http_request_header():
+"""def http_request_header():
     # see https://stackoverflow.com/questions/51154114/python-request-get-fails-to-get-an-answer-for-a-url-i-can-open-on-my-browser
 
     return {
@@ -13,7 +13,7 @@ def http_request_header():
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5"
         # , "Accept-Encoding": "gzip, deflate"
-    }
+    }"""
 
 """def http_get(url):
     # request_header = http_request_header()
@@ -44,7 +44,7 @@ def http_request_header():
     print('Exhausted retries, http_get failed. Error list\n', err_list)
     return None"""
 
-time_counters = [-1.0, -1.0, -1.0, -1.0, -1.0,]
+"""time_counters = [-1.0, -1.0, -1.0, -1.0, -1.0,]
 def time_since_last(time_id, precision=0):
     global time_counters
     if time_counters[time_id] == -1.0:
@@ -54,13 +54,13 @@ def time_since_last(time_id, precision=0):
         t1 = time_counters[time_id]
         time_counters[time_id] = time.time()
         return int(time_counters[time_id] - t1) if precision == 0 else \
-            round(time_counters[time_id] - t1, precision)
+            round(time_counters[time_id] - t1, precision)"""
 
-def progress_str(n1, n2):
+"""def progress_str(n1, n2):
     msg = '    %d/%d Completed' % (n1, n2)
-    return len(msg) * '\b' + msg
+    return len(msg) * '\b' + msg"""
 
-# --------------------------------------------------------------------------------------------
+"""# --------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     for i in range(100):
         print(progress_str(i, 100), end='')
@@ -73,4 +73,4 @@ if __name__ == '__main__':
     time.sleep(1)
     assert time_since_last(1) - t0 == 3, 'ERROR! time_since_last #1'
 
-    print('All OK')
+    print('All OK')"""

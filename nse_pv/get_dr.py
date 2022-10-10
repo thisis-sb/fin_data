@@ -2,7 +2,7 @@
 Download daily reports from NSE
 Usage: MMMYYYY
 """
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 
 import datetime
 import os
@@ -11,19 +11,19 @@ import requests
 from pathlib import Path
 from calendar import monthrange, month_abbr
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.utils
 from pygeneric.archiver import Archiver
+import pygeneric.http_utils as http_utils
 from settings import DATA_ROOT, NSE_ARCHIVES_URL
 
 OUTPUT_DIR = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 def get_files(sub_url, filenames, archive_full_path):
     archive = Archiver(archive_full_path, 'w', overwrite=True, compression='zip')
     n_downloaded, total_size, last_file = 0, 0, None
     for f in filenames:
         url = '%s/%s/%s' % (NSE_ARCHIVES_URL, sub_url, f)
-        r = requests.get(url, headers=common.utils.http_request_header(), stream=True)
+        r = requests.get(url, headers=http_utils.http_request_header(), stream=True)
         if r.ok:
             n_downloaded += 1
             total_size += len(r.content)
@@ -31,17 +31,16 @@ def get_files(sub_url, filenames, archive_full_path):
             last_file = f
     archive.flush()
     print('%d files, %.1f KB, last: %s' % (n_downloaded, total_size/1e3, last_file))
-# ----------------------------------------------------------------------------------
 
-def nse_download_daily_reports(year_str, month_str, verbose=False):
-    months = {month.upper(): index for index, month in enumerate(month_abbr) if month}
+def nse_download_daily_reports(year_str, month_str):
+    months_dict = {month.upper(): index for index, month in enumerate(month_abbr) if month}
     date_now = datetime.datetime.now()
     n_days = date_now.day \
-        if (date_now.year == int(year_str) and date_now.month == months[month_str]) else \
-        monthrange(int(year_str), months[month_str])[1]
+        if (date_now.year == int(year_str) and date_now.month == months_dict[month_str]) else \
+        monthrange(int(year_str), months_dict[month_str])[1]
     print('\nDownloading for %s-%s: n_days: %d ...' % (year_str, month_str, n_days))
 
-    dest_folder = OUTPUT_DIR + '/%s/%s' % (year_str, f'{months[month_str]}'.zfill(2))
+    dest_folder = OUTPUT_DIR + '/%s/%s' % (year_str, f'{months_dict[month_str]}'.zfill(2))
     Path(dest_folder).mkdir(parents=True, exist_ok=True)
 
     print('\nCash Market reports ...')
@@ -51,7 +50,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
          'sub_url': 'content/indices',
          'archive': f'{dest_folder}/indices_close.zip',
          'files': ['ind_close_all_%s%s%s.csv'
-                   % (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str)
+                   % (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str)
                    for d in range(1, n_days + 1)]
          },
         # https://archives.nseindia.com/content/historical/EQUITIES/2022/SEP/cm30SEP2022bhav.csv.zip
@@ -68,7 +67,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
             'sub_url': 'archives/equities/mto',
             'archive': f'{dest_folder}/MTO.zip',
             'files': ['MTO_%s%s%s.DAT' %
-                      (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str)
+                      (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str)
                       for d in range(1, n_days + 1)]
         },
         # https://archives.nseindia.com/content/CM_52_wk_High_low_30092022.csv
@@ -77,7 +76,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
             'sub_url': 'content',
             'archive': f'{dest_folder}/cm_52_wk_HL.zip',
             'files': ['CM_52_wk_High_low_%s%s%s.csv' %
-                      (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str)
+                      (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str)
                       for d in range(1, n_days + 1)]
         },
         # https://archives.nseindia.com/archives/equities/bhavcopy/pr/PR300922.zip
@@ -86,7 +85,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
             'sub_url': 'archives/equities/bhavcopy/pr',
             'archive': f'{dest_folder}/PR.zip',
             'files': ['PR%s%s%s.zip' %
-                      (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str[2:])
+                      (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str[2:])
                       for d in range(1, n_days + 1)]
         }
     ]
@@ -111,7 +110,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
             'sub_url': 'content/nsccl',
             'archive': f'{dest_folder}/fo_participant_wise_oi.zip',
             'files': ['fao_participant_vol_%s%s%s.csv' %
-                      (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str)
+                      (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str)
                       for d in range(1, n_days + 1)]
         },
         # https://archives.nseindia.com/content/nsccl/fao_participant_vol_30092022.csv
@@ -120,7 +119,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
             'sub_url': 'content/nsccl',
             'archive': f'{dest_folder}/fo_participant_wise_vol.zip',
             'files': ['fao_participant_vol_%s%s%s.csv' %
-                      (f'{d}'.zfill(2), f'{months[month_str]}'.zfill(2), year_str)
+                      (f'{d}'.zfill(2), f'{months_dict[month_str]}'.zfill(2), year_str)
                       for d in range(1, n_days + 1)]
         }
     ]
@@ -131,7 +130,7 @@ def nse_download_daily_reports(year_str, month_str, verbose=False):
 
     return
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     months = ['OCT2022'] if len(sys.argv) == 1 else sys.argv[1:]
 

@@ -3,7 +3,7 @@ Download NSE Historical Price-Volume & Price-Ratios
 Usage: [full | ytd] [csv | symbols]
 """
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 import datetime
 import os
 import sys
@@ -15,9 +15,11 @@ from settings import DATA_ROOT
 
 OUTPUT_DIR     = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 def fetch_year_data(symbol, symbol_type, year, verbose=False):
-    if verbose: print(f'  {symbol} for year {year}', end=' ')
+    if verbose:
+        print(f'  {symbol} for year {year}', end=' ')
+
     date_today_tokens = datetime.datetime.now().strftime('%Y-%m-%d').split('-')
     start_date = datetime.date(year, 1, 1)
     end_date   = datetime.date(year, 12, 31) if year < int(date_today_tokens[0]) else \
@@ -35,9 +37,11 @@ def fetch_year_data(symbol, symbol_type, year, verbose=False):
         if not os.path.exists(os.path.dirname(output_filename)):
             os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         df.to_csv(output_filename)
-        if verbose: print(df.shape[0], 'rows.')
+        if verbose:
+            print(df.shape[0], 'rows.')
     else:
-        if verbose: print('no data.')
+        if verbose:
+            print('no data.')
 
     last_date = None if df.shape[0] == 0 else df.index[-1]
 
@@ -80,14 +84,15 @@ def download_all(symbols, download_type, verbose=False):
             fetch_symbol_data(sym.split('.')[0], 'EQ', download_type, verbose)
         if i < len(symbol_list)-1:
             sleep(3)
+
     print(f'\nData for {len(symbol_list)} symbols retrieved.')
     return
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     verbose = False
     download_type = 'ytd' if len(sys.argv) == 1 else sys.argv[1]
-    symbols = sys.argv[2:] if len(sys.argv) > 2 else\
+    symbols = sys.argv[2:] if len(sys.argv) > 2 else \
         ['NIFTY 50.IDX', 'NIFTY BANK.IDX', 'NIFTY 500.IDX',
          'ASIANPAINT.EQ', 'BRITANNIA.EQ', 'HDFC.EQ', 'ICICIBANK.EQ', 'IRCTC.EQ', 'JUBLFOOD.EQ',
          'ZYDUSLIFE.EQ', 'PAYTM.EQ']

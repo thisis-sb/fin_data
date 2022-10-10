@@ -2,7 +2,7 @@
 NSE process daily market reports
 Usage: year
 """
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 
 import datetime
 import os
@@ -12,7 +12,7 @@ from io import BytesIO
 from zipfile import ZipFile
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.utils
+import pygeneric.datetime_utils as datetime_utils
 import common.nse_symbols
 from settings import DATA_ROOT, CONFIG_DIR
 from pygeneric.archiver import Archiver
@@ -20,9 +20,10 @@ from pygeneric.archiver import Archiver
 SUB_PATH1 = '01_nse_pv/02_dr'
 SUB_PATH2 = os.path.join(SUB_PATH1, 'processed')
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 def remove_existing_files(file_regex, verbose=False):
-    common.utils.time_since_last(0); common.utils.time_since_last(1)
+    datetime_utils.time_since_last(0)
+    datetime_utils.time_since_last(1)
 
     files_to_remove = glob.glob(os.path.join(DATA_ROOT, SUB_PATH2, file_regex))
 
@@ -33,65 +34,13 @@ def remove_existing_files(file_regex, verbose=False):
         if verbose: print('No files to remove', end='. ')
 
     if verbose:
-        print('time check (remove files):', common.utils.time_since_last(1), 'seconds', end='. ')
+        print('time check (remove files):', datetime_utils.time_since_last(1), 'seconds', end='. ')
     return
 
-"""def read_raw_files(path_regex, n_days=0, dr_type=None, verbose=False):
-    csv_files = glob.glob(path_regex)
-
-    n_files = n_days if 0 < n_days < len(csv_files) else len(csv_files)
-    if verbose:
-        print(f'Loading {n_files} / {len(csv_files)} raw files ... ', end='')
-
-    if dr_type == 'MTO':
-        def report_date(f):
-            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
-            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
-
-        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
-        df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
-                                   pd.DataFrame({'Date': [report_date(f)]})],
-                                  axis=1) for f in csv_files[-n_files:]], axis=0)
-        df.fillna(method='ffill', inplace=True)
-    else:
-        df = pd.concat([pd.read_csv(f) for f in csv_files[-n_files:]], axis=0)
-    df = df[[col for col in df.columns if 'Unnamed' not in col]]
-    if verbose: print('Done, shape:', df.shape)
-
-    return df"""
-
-"""def read_archive(path_regex, dr_type=None, verbose=False):
-    archive_files = glob.glob(path_regex)
-    if verbose:
-        print('archive_files:')
-        print(archive_files)
-        print(f'\nLoading {len(archive_files)} archives ... ', end='')
-    archives = [Archiver(f, mode='r', compression='zip') for f in archive_files]
-
-    if dr_type is None:
-        df = pd.concat([pd.read_csv(BytesIO(a.get(f))) for a in archives for f in a.keys()], axis=0)
-    elif dr_type == 'MTO':
-        def report_date(f):
-            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
-            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
-
-        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
-        '''df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
-                                   pd.DataFrame({'Date': [report_date(f)]})],
-                                  axis=1) for f in csv_files[-n_files:]], axis=0)
-        df.fillna(method='ffill', inplace=True)'''
-        df = pd.DataFrame()
-    else:
-        df = pd.DataFrame()
-
-    df = df[[col for col in df.columns if 'Unnamed' not in col]]
-    if verbose:
-        print('Done, shape:', df.shape)
-
-    return df"""
-
+''' --------------------------------------------------------------------------------------- '''
 def process_index_reports(year, verbose=False):
-    common.utils.time_since_last(0); common.utils.time_since_last(1)
+    datetime_utils.time_since_last(0)
+    datetime_utils.time_since_last(1)
 
     archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/indices_close.zip'))
     if verbose:
@@ -122,12 +71,14 @@ def process_index_reports(year, verbose=False):
            df['Date'].values[-1].astype('datetime64[D]'),
            len(df['Date'].unique())))
 
-    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
 
     return
 
+''' --------------------------------------------------------------------------------------- '''
 def process_etf_reports(year, verbose=False):
-    common.utils.time_since_last(0); common.utils.time_since_last(1)
+    datetime_utils.time_since_last(0)
+    datetime_utils.time_since_last(1)
 
     archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/PR.zip'))
     if verbose:
@@ -185,12 +136,14 @@ def process_etf_reports(year, verbose=False):
           (df['Date'].values[0].astype('datetime64[D]'), df['Date'].values[-1].astype('datetime64[D]'),
            len(df['Date'].unique())))
 
-    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
 
     return
 
+''' --------------------------------------------------------------------------------------- '''
 def process_cm_reports(year, symbols, verbose=False):
-    common.utils.time_since_last(0); common.utils.time_since_last(1)
+    datetime_utils.time_since_last(0)
+    datetime_utils.time_since_last(1)
 
     archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/cm_bhavcopy.zip'))
     if verbose:
@@ -248,7 +201,7 @@ def process_cm_reports(year, symbols, verbose=False):
     df = df.merge(df2[['Date', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']],
                   on=['Date', 'Symbol', 'Series'], how='inner').reset_index(drop=True)
     if verbose:
-        print('time check (load files):', common.utils.time_since_last(1), 'seconds')
+        print('time check (load files):', datetime_utils.time_since_last(1), 'seconds')
 
     all_symbols = sorted(df['Symbol'].unique())
     print(len(all_symbols), 'symbols found in raw data')
@@ -260,13 +213,13 @@ def process_cm_reports(year, symbols, verbose=False):
         xx = sc_df.loc[sc_df['new'] == symbol]
         if xx.shape[0] > 0:
             df.loc[df['Symbol'] == xx['old'].values[-1], 'Symbol'] = symbol
-    if verbose: print('time check (symbol changes):', common.utils.time_since_last(1), 'seconds')
+    if verbose: print('time check (symbol changes):', datetime_utils.time_since_last(1), 'seconds')
 
     df = df.loc[df['Symbol'].isin(symbols_to_process)]
     df['Date'] = pd.to_datetime(df['Date'], format="%Y-%m-%d")
     df = df.sort_values(by=['Symbol', 'Date']).reset_index(drop=False)
     if verbose: print(f'Done. {len(symbols_to_process)} processed. Data shape:', df.shape)
-    if verbose: print('time check (filtering):', common.utils.time_since_last(1), 'seconds')
+    if verbose: print('time check (filtering):', datetime_utils.time_since_last(1), 'seconds')
 
     df = df[['Date', 'Symbol', 'Series', 'Open', 'High', 'Low', 'Close', 'Prev Close',
              'Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades',
@@ -284,11 +237,66 @@ def process_cm_reports(year, symbols, verbose=False):
           % (year, len(df['Symbol'].unique()), len(df['Date'].unique()), first_date, last_date,
              date_1yago.strftime('%Y-%m-%d')))
 
-    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
 
     return
 
+''' --------------------------------------------------------------------------------------- '''
 # FO processing: TO DO
+"""def read_raw_files(path_regex, n_days=0, dr_type=None, verbose=False):
+    csv_files = glob.glob(path_regex)
+
+    n_files = n_days if 0 < n_days < len(csv_files) else len(csv_files)
+    if verbose:
+        print(f'Loading {n_files} / {len(csv_files)} raw files ... ', end='')
+
+    if dr_type == 'MTO':
+        def report_date(f):
+            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
+            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
+
+        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
+        df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
+                                   pd.DataFrame({'Date': [report_date(f)]})],
+                                  axis=1) for f in csv_files[-n_files:]], axis=0)
+        df.fillna(method='ffill', inplace=True)
+    else:
+        df = pd.concat([pd.read_csv(f) for f in csv_files[-n_files:]], axis=0)
+    df = df[[col for col in df.columns if 'Unnamed' not in col]]
+    if verbose: print('Done, shape:', df.shape)
+
+    return df"""
+
+"""def read_archive(path_regex, dr_type=None, verbose=False):
+    archive_files = glob.glob(path_regex)
+    if verbose:
+        print('archive_files:')
+        print(archive_files)
+        print(f'\nLoading {len(archive_files)} archives ... ', end='')
+    archives = [Archiver(f, mode='r', compression='zip') for f in archive_files]
+
+    if dr_type is None:
+        df = pd.concat([pd.read_csv(BytesIO(a.get(f))) for a in archives for f in a.keys()], axis=0)
+    elif dr_type == 'MTO':
+        def report_date(f):
+            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
+            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
+
+        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
+        '''df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
+                                   pd.DataFrame({'Date': [report_date(f)]})],
+                                  axis=1) for f in csv_files[-n_files:]], axis=0)
+        df.fillna(method='ffill', inplace=True)'''
+        df = pd.DataFrame()
+    else:
+        df = pd.DataFrame()
+
+    df = df[[col for col in df.columns if 'Unnamed' not in col]]
+    if verbose:
+        print('Done, shape:', df.shape)
+
+    return df"""
+
 """
 def process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
     common.utils.time_since_last(0); common.utils.time_since_last(1)
@@ -364,7 +372,7 @@ def get_52week_high_low(df):
     return
 """
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     tst_syms = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'ZYDUSLIFE']
     verbose = False

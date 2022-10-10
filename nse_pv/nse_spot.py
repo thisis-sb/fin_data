@@ -1,7 +1,7 @@
 """
 API class & other methods for NSE spot PV data
 """
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 
 import os
 import sys
@@ -12,11 +12,11 @@ from nsetools import Nse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.nse_cf_ca
 import common.nse_symbols
-import common.utils
+import pygeneric.datetime_utils as datetime_utils
 import pygeneric.http_utils as http_utils
 from settings import DATA_ROOT, CONFIG_DIR, LOG_DIR
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
         data_file = 'cm_bhavcopy_all.csv.parquet'
@@ -119,7 +119,7 @@ class NseSpotPVData:
 
     def get_pv_data_multiple(self, symbols, series='EQ', after=None, from_to=None, n_days=0,
                              get52wkhl=True, verbose=False):
-        common.utils.time_since_last(0)
+        datetime_utils.time_since_last(0)
 
         if self.pv_data is None: return None
 
@@ -164,11 +164,11 @@ class NseSpotPVData:
 
         if verbose:
             print(f'Done. {n_adj} adjusted')
-            print('time check (get_pv_data_multiple):', common.utils.time_since_last(0), 'seconds\n')
+            print('time check (get_pv_data_multiple):', datetime_utils.time_since_last(0), 'seconds\n')
 
         return df_adj
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 def get_index_pv(symbol, from_to=None):
     md_idx = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_indices')
     data_files = glob.glob(
@@ -187,7 +187,7 @@ def get_index_pv(symbol, from_to=None):
     df.reset_index(drop=True, inplace=True)
     return df
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 def get_etf_pv(symbol=None, underlying=None, from_to=None):  # later on, series ETF/IDX/EQ
     md_etf = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_etf')
     data_files = glob.glob(
@@ -207,7 +207,7 @@ def get_etf_pv(symbol=None, underlying=None, from_to=None):  # later on, series 
     df.reset_index(drop=True, inplace=True)
     return df
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 # current spot prices
 spot_nse_obj = None
 def get_spot_quote(symbol, index=False):
@@ -230,7 +230,11 @@ def get_spot_quote(symbol, index=False):
         global spot_nse_obj
         if spot_nse_obj is None:
             spot_nse_obj = Nse()
-        get_dict = spot_nse_obj.get_index_quote(symbol)
+        try:
+            get_dict = spot_nse_obj.get_index_quote(symbol)
+        except:
+            get_dict = None
+
         # print(get_dict)
         return {
             'name': get_dict['name'],
@@ -244,7 +248,7 @@ def get_spot_quote(symbol, index=False):
             'pChange': round(float(get_dict['pChange']), 2)
         } if get_dict is not None else None
 
-''' -------------------------------------------------------------------------------------------- '''
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     import numpy as np
     print(f'\nTesting {__file__} ...\n')

@@ -1,8 +1,8 @@
-# ----------------------------------------------------------------------------------------------
-# Download MF NAV files from AMFI website
-# Usage: dd-mmm-yyyy [dd-mmm-yyyy ...]
-# ----------------------------------------------------------------------------------------------
-
+"""
+Download MF NAV files from AMFI website
+Usage: dd-mmm-yyyy [dd-mmm-yyyy ...]
+"""
+''' --------------------------------------------------------------------------------------- '''
 import os
 import sys
 import pandas as pd
@@ -29,7 +29,7 @@ def get_raw_amfi_data(last_date):
 
     return df
 
-# ----------------------------------------------------------------------------------------------
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     assert len(sys.argv) > 1, '\n\nERROR! At-least one date in dd-mmm-yyyy format required'
     dates = sys.argv[1:]
