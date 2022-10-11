@@ -1,5 +1,6 @@
 import os
 
+CUTOFF_DATE      = '2018-01-01'
 DATA_ROOT        = os.path.join(os.getenv('DATA_DIR'), f'01_fin_data')
 CONFIG_DIR       = os.path.join(DATA_ROOT, f'00_config')
 LOG_DIR          = os.path.join(os.getenv('HOME_DIR'), f'98_log/01_fin_data')

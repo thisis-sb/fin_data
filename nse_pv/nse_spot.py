@@ -62,7 +62,7 @@ class NseSpotPVData:
         df_raw['idx'] = df_raw.index
         symbol_cfca = common.nse_cf_ca.get_corporate_actions(symbol)
         for idx, cfca_row in symbol_cfca.iterrows():
-            date_idx = df_raw.index[df_raw['Date'] == cfca_row['EX-DATE']]
+            date_idx = df_raw.index[df_raw['Date'] == cfca_row['Ex Date']]
             if len(date_idx) != 0:
                 df_raw = df_raw.apply(lambda row: adj(row, date_idx[0], cfca_row['MULT']), axis=1)
         df_raw.drop(columns=['idx'], inplace=True)

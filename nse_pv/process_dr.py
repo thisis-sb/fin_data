@@ -141,7 +141,7 @@ def process_etf_reports(year, verbose=False):
     return
 
 ''' --------------------------------------------------------------------------------------- '''
-def process_cm_reports(year, symbols, verbose=False):
+def process_cm_reports(year, symbols=None, verbose=False):
     datetime_utils.time_since_last(0)
     datetime_utils.time_since_last(1)
 
@@ -210,9 +210,9 @@ def process_cm_reports(year, symbols, verbose=False):
 
     sc_df = common.nse_symbols.get_symbol_changes()
     for symbol in symbols_to_process:
-        xx = sc_df.loc[sc_df['new'] == symbol]
+        xx = sc_df.loc[sc_df['New Symbol'] == symbol]
         if xx.shape[0] > 0:
-            df.loc[df['Symbol'] == xx['old'].values[-1], 'Symbol'] = symbol
+            df.loc[df['Symbol'] == xx['Old Symbol'].values[-1], 'Symbol'] = symbol
     if verbose: print('time check (symbol changes):', datetime_utils.time_since_last(1), 'seconds')
 
     df = df.loc[df['Symbol'].isin(symbols_to_process)]
@@ -393,12 +393,12 @@ if __name__ == '__main__':
     print('Processing ETF Daily Reports ... Done\n')
 
     print('Processing CM Daily Reports ... Start')
-    # symbols = tst_syms
-    eq_l = pd.read_csv(os.path.join(CONFIG_DIR, '02_nse_symbols/EQUITY_L.csv'))
+    """eq_l = pd.read_csv(os.path.join(CONFIG_DIR, '02_nse_symbols/EQUITY_L.csv'))
     eq_l = eq_l.loc[eq_l[' SERIES'] == 'EQ']
     eql_syms = eq_l['SYMBOL']
     symbols = sorted(list(set(eql_syms) |
-                          set(common.nse_symbols.get_symbols(['ind_my_custom_index']))))
+                          set(common.nse_symbols.get_symbols(['ind_my_custom_index']))))"""
+    symbols = None  # tst_syms
     process_cm_reports(year, symbols=symbols, verbose=verbose)
     print('Processing CM Daily Reports ... Done\n')
 
