@@ -69,11 +69,13 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbol, series='EQ', from_to=None, n_days=0, adjust=True):
-        if self.pv_data is None: return None
+    def get_pv_data(self, symbol, series=None, from_to=None, n_days=0, adjust=True):
+        if self.pv_data is None:
+            return None
 
-        df = self.pv_data.loc[(self.pv_data['Symbol'] == symbol) &
-                              (self.pv_data['Series'] == series)]
+        df = self.pv_data.loc[self.pv_data['Symbol'] == symbol]
+        if series is not None:
+            df = df.loc[df['Series'] == series]
 
         if from_to is not None:
             date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
@@ -94,7 +96,8 @@ class NseSpotPVData:
 
     def get_pv_data_api(self, symbol, after=None, from_to=None, n_days=0):
         csv_files = glob.glob(os.path.join(DATA_ROOT, '01_nse_pv/01_api', f'{symbol}/*.csv'))
-        if len(csv_files) == 0: return pd.DataFrame()
+        if len(csv_files) == 0:
+            return pd.DataFrame()
         df = pd.concat([pd.read_csv(f) for f in csv_files], axis=0)
         df['Date'] = df['Date'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
         df.drop_duplicates(inplace=True)
@@ -117,17 +120,19 @@ class NseSpotPVData:
 
         return df
 
-    def get_pv_data_multiple(self, symbols, series='EQ', after=None, from_to=None, n_days=0,
+    def get_pv_data_multiple(self, symbols, series=None, after=None, from_to=None, n_days=0,
                              get52wkhl=True, verbose=False):
         datetime_utils.time_since_last(0)
 
-        if self.pv_data is None: return None
+        if self.pv_data is None:
+            return None
 
         if verbose:
             print(f'Retrieving {len(symbols)} symbols (adjusted) with 52wk H/L data ...')
 
-        df = self.pv_data.loc[(self.pv_data['Series'] == series) &
-                              (self.pv_data['Symbol'].isin(symbols))]
+        df = self.pv_data.loc[self.pv_data['Symbol'].isin(symbols)]
+        if series is not None:
+            df = df.loc[df['Series'] == series]
 
         df_adj = None
         n_adj = 0
@@ -264,7 +269,7 @@ if __name__ == '__main__':
 
     for symbol in symbols:
         print(f'Testing for {symbol} ...', end=' ')
-        df1 = nse_pvdata.get_pv_data(symbol, from_to=['2021-01-01', '2022-03-31'])
+        df1 = nse_pvdata.get_pv_data(symbol, series='EQ', from_to=['2021-01-01', '2022-03-31'])
         df2 = nse_pvdata.get_pv_data_api(symbol, from_to=['2021-01-01', '2022-03-31'])
         df1.to_csv(os.path.join(LOG_DIR, 'nse_spot_df1.csv'), index=False)
         df2.to_csv(os.path.join(LOG_DIR, 'nse_spot_df2.csv'), index=False)
@@ -308,6 +313,14 @@ if __name__ == '__main__':
     print(get_spot_quote('HINDALCO'))
     print(get_spot_quote('ICICITECH'))
     print(get_spot_quote('NIFTY 50', index=True))
+    print('Done')
+
+    print('\nTesting for partly paid symbol ...')
+    df_pp = nse_pvdata.get_pv_data('AIRTELPP', series='E1', from_to=['2022-10-01', '2022-10-10'])
+    assert df_pp.shape[0] == 5, 'partly paid Not OK'
+    df_pp = nse_pvdata.get_pv_data_multiple(['BHARTIARTL', 'AIRTELPP'],
+                                            from_to=['2022-10-01', '2022-10-10'])
+    assert df_pp.shape[0] == 10, 'partly paid Not OK'
     print('Done')
 
     print('\nAll Done')
