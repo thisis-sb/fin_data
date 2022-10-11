@@ -69,7 +69,7 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbol, series=None, from_to=None, n_days=0, adjust=True):
+    def get_pv_data(self, symbol, series='EQ', from_to=None, n_days=0, adjust=True):
         if self.pv_data is None:
             return None
 
@@ -120,7 +120,7 @@ class NseSpotPVData:
 
         return df
 
-    def get_pv_data_multiple(self, symbols, series=None, after=None, from_to=None, n_days=0,
+    def get_pv_data_multiple(self, symbols, series='EQ', after=None, from_to=None, n_days=0,
                              get52wkhl=True, verbose=False):
         datetime_utils.time_since_last(0)
 
@@ -320,7 +320,10 @@ if __name__ == '__main__':
     assert df_pp.shape[0] == 5, 'partly paid Not OK'
     df_pp = nse_pvdata.get_pv_data_multiple(['BHARTIARTL', 'AIRTELPP'],
                                             from_to=['2022-10-01', '2022-10-10'])
-    assert df_pp.shape[0] == 10, 'partly paid Not OK'
+    assert df_pp.shape[0] == 5, 'partly paid Not OK'
+    df_pp = nse_pvdata.get_pv_data_multiple(['BRITANNIA'],
+                                            from_to=['2022-10-01', '2022-10-10'])
+    assert df_pp.shape[0] == 5, 'partly paid Not OK'
     print('Done')
 
     print('\nAll Done')
