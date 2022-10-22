@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import requests
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.utils
+import pygeneric.http_utils as http_utils
 from settings import CONFIG_DIR, DATA_ROOT
 
 MODULE = '06_w_com'
@@ -20,7 +20,7 @@ def get_hist(symbol, category, year, auth_key_str, verbose=False):
     url = url1 + url2 + url3 + url4
     if verbose: print('url:[%s]' % url)
 
-    r = requests.get(url, headers=common.utils.http_request_header(), stream=True)
+    r = requests.get(url, headers=http_utils.http_request_header(), stream=True)
     if not r.ok:
         raise ValueError('ERROR!', r.ok)
     data = r.json()
