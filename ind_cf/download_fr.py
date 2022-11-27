@@ -1,217 +1,144 @@
-# --------------------------------------------------------------------------------------------
-# Download CF FRs - and create pickle DB, meta_DB & error_DB.
-# Only new files in input csv's are downloaded
-# Usage: exchange
-# --------------------------------------------------------------------------------------------
+"""
+Download CF FRs & create XBRL archive & metadata to access that
+Usage: n_to_download exchange
+Open Issues / TO DO:
+    1. What to do with errors later on (if they're fixed)
+"""
+''' --------------------------------------------------------------------------------------- '''
 
 import sys
 import os
 import glob
 import datetime
-import time
 import pandas as pd
-import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.utils
-import common.archiver
+import pygeneric.archiver as pygeneric_archiver
+import pygeneric.misc as pygeneric_misc
 import base_utils
-from settings import CONFIG_DIR, DATA_ROOT, LOG_DIR
+from settings import DATA_ROOT
 
-MODULE = '02_ind_cf'
+SUB_PATH1 = '02_ind_cf'
 CONFIG_SYM = '02_nse_symbols'
 
-def get_fr_xbrl_urls(exchange, redo_errors=False):
-    if redo_errors:
-        ERRORS_DB = base_utils.fr_meta_data_files(exchange)[1]
-        assert os.path.exists(ERRORS_DB), f'{ERRORS_DB} does not exist'
-        urls_df = pd.read_csv(ERRORS_DB)
-    else:
-        files = 'scrape_results_*.csv' if exchange == 'bse' else 'CF-FR-*.csv'
-        xbrl_files = glob.glob(DATA_ROOT + f'/{MODULE}/{exchange}_fr_1/{files}')
-        urls_df = pd.concat([pd.read_csv(f) for f in xbrl_files])
+''' --------------------------------------------------------------------------------------- '''
+def current_asn(xp):
+    al = glob.glob('%s/**/archive_*' % xp)
+    assert len(al) > 0, f'{xp}: Something went really bad. len(al): {len(al)}'
+    current_archive_path = sorted(al)[-1]
+    return int(os.path.basename(current_archive_path).split('_')[1])
 
-    if exchange == 'nse':
-        eql_df = pd.read_csv(CONFIG_DIR + f'/{CONFIG_SYM}/EQUITY_L.csv')
-        eql_df.rename(columns={'NAME OF COMPANY':'COMPANY NAME'}, inplace=True)
-        urls_df = pd.merge(urls_df, eql_df, on='COMPANY NAME', how='left')
-        urls_df.rename(columns={'SYMBOL':'NSE Symbol', ' ISIN NUMBER':'ISIN', ' SERIES':'SERIES',
-                                '** XBRL':'XBRL Link', 'PERIOD ENDED':'PERIOD_ENDED'
-                                }, inplace=True)
-        urls_df = urls_df[['NSE Symbol', 'ISIN', 'SERIES',
-                           'COMPANY NAME', 'PERIOD_ENDED', 'XBRL Link']]
-        [urls_df[col].fillna('ZZ', inplace=True)
-         for col in ['NSE Symbol', 'ISIN', 'SERIES', 'COMPANY NAME']]
-    elif exchange == 'bse':
-        nse_eql_df = pd.read_csv(CONFIG_DIR + f'/{CONFIG_SYM}/EQUITY_L.csv')
-        nse_eql_df.rename(columns={' ISIN NUMBER': 'ISIN',
-                                   ' SERIES': 'SERIES',
-                                   'NAME OF COMPANY':'COMPANY NAME'
-                                   }, inplace=True)
-        nse_eql_df = nse_eql_df[['SYMBOL', 'ISIN', 'COMPANY NAME', 'SERIES']]
-        urls_df = pd.merge(urls_df, nse_eql_df, on='ISIN', how='left')
-        # to do: cross-check NSE Symbol == SYMBOL
-        urls_df = urls_df[['NSE Symbol', 'BSE Code', 'ISIN', 'COMPANY NAME', 'SERIES', 'XBRL Link']]
-        urls_df['PERIOD_ENDED'] = 'NA-temp-for-now'  # for now (fix in bse scraping later)
-    else:
-        assert False, 'Invalid Exchange'
+def get_asf(asn, divider):
+    """ Logic: divmod(asn, divider=ARCHIVES_PER_SUB_FOLDER) """
+    return ('%d' % divmod(asn, divider)[0]).zfill(2)
 
-    urls_df.reset_index(drop=True, inplace=True)
-    # print(urls_df.head()); urls_df.to_csv(LOG_DIR + '/download_fr_urls_df.csv', index=False);exit()
-    return urls_df
-
-# --------------------------------------------------------------------------------------------
+''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    n_to_download = 10000 if len(sys.argv) == 1 else int(sys.argv[1])
-    exchange = 'nse' if len(sys.argv) <= 2 else sys.argv[2]
-    redo_errors = False  # for now, set manually
+    n_to_download = 5000 if len(sys.argv) != 2 else int(sys.argv[1])
+    exchange = 'nse' if len(sys.argv) != 3 else sys.argv[2]
 
-    download_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
-    ARCHIVE_NAME = f'{exchange}_{download_timestamp}'
-    OUT_DIR = DATA_ROOT + f'/{MODULE}/{exchange}_fr_2'
-    xbrl_archive = common.archiver.Archiver(os.path.join(OUT_DIR, ARCHIVE_NAME), 'w')
+    fr_filings_df = base_utils.load_filings_fr(
+        os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_filings/CF_FR_*.csv'))
+    fr_filings_df['filingDate'] = pd.to_datetime(fr_filings_df['filingDate'])
+    fr_filings_df.sort_values(by='filingDate')
+    fr_filings_df.reset_index(drop=True, inplace=True)
 
-    META_DATA_DB, ERRORS_DB = base_utils.fr_meta_data_files(exchange)
-    if os.path.exists(META_DATA_DB):
-        meta_data_df = pd.read_csv(META_DATA_DB)
-        print('\nLoaded existing META_DATA_DB shape:', meta_data_df.shape)
-        downloaded_fr_files = meta_data_df['XBRL_filename'].unique()
+    ARCHIVE_FOLDER = os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_xbrl_archive')
+    METADATA_FILENAME = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
+
+    ''' Important:
+    50 archives per sub_folder. 50 xbrl files per archive.
+    With 20 sub_folders, can store 100000 xbrl files --> Ok for 3 more years (across 40 sub_folders)
+    '''
+    ARCHIVES_PER_SUB_FOLDER = 50
+    ARCHIVE_MAX_SIZE = 50
+
+    if os.path.exists(METADATA_FILENAME):
+        metadata_df = pd.read_csv(METADATA_FILENAME)
+        df = fr_filings_df.loc[~fr_filings_df['xbrl'].isin(metadata_df['xbrl'].unique())]
+        xbrl_links_to_download = df['xbrl'].unique()
+        archive_sequence_number = current_asn(ARCHIVE_FOLDER)
     else:
-        meta_data_df = pd.DataFrame()
-        downloaded_fr_files = []
+        metadata_df = pd.DataFrame()
+        xbrl_links_to_download = fr_filings_df['xbrl'].unique()
+        archive_sequence_number = 0
+    print('archive_sequence_number:', archive_sequence_number)
+    print('metadata_df.shape:', metadata_df.shape)
+    print('In all, %d UN-downloaded xbrl links' % len(xbrl_links_to_download))
 
-    if os.path.exists(ERRORS_DB):
-        errors_df = pd.read_csv(ERRORS_DB)
-        print('Loaded existing ERRORS_DB shape:', errors_df.shape)
-        erroneous_fr_files = errors_df['XBRL Link'].to_list()
-    else:
-        errors_df = pd.DataFrame()
-        erroneous_fr_files = []
+    print('\nXBRL downloads START ...')
+    run_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
+    xbrl_archive, archive_path, n_downloaded, n_errors = None, None, 0, 0
+    for idx, xbrl_url in enumerate(xbrl_links_to_download):
+        pygeneric_misc.print_progress_str(idx + 1, len(xbrl_links_to_download))
 
-    xbrl_urls_df = get_fr_xbrl_urls(exchange, redo_errors)
-    # xbrl_urls_df = xbrl_urls_df.head(5).reset_index(drop=True)
-    # xbrl_urls_df = xbrl_urls_df[(xbrl_urls_df['NSE Symbol'].str.startswith('Z')) |
-    #                            (xbrl_urls_df['NSE Symbol'].str.startswith('IC'))].reset_index()
-    # print(xbrl_urls_df.shape);
-    xbrl_urls_df.to_csv(LOG_DIR + f'/{MODULE}/download_fr_urls_df.csv')
-    # exit()
-    print(f'\nProcessing {xbrl_urls_df.shape[0]} files from {exchange} exchange :::')
-    # exit()
-
-    n_downloaded, n_skipped, n_errors = 0, 0, 0
-    redone_errors = []
-    meta_data_index, error_db_index = meta_data_df.shape[0], errors_df.shape[0]
-    common.utils.time_since_last(0)
-    for idx, row in xbrl_urls_df.iterrows():
-        verbose = False
-        xbrl_url = row['XBRL Link']
-
-        print(common.utils.progress_str(idx + 1, xbrl_urls_df.shape[0]), end=''); sys.stdout.flush()
-
-        if (idx + 2) % 100 == 1:
-            time.sleep(1)
-            # later: flush intermediate results & reload
-
-        if os.path.basename(xbrl_url) in downloaded_fr_files or \
-                (not redo_errors and xbrl_url in erroneous_fr_files):
-            '''print('XBRL file previously downloaded, skipping')'''
-            n_skipped = n_skipped + 1
-            continue
-        elif os.path.basename(xbrl_url) == '-':
-            errors_df = pd.concat([
-                errors_df, pd.DataFrame(
-                    {'NSE Symbol': row['NSE Symbol'],
-                     'ISIN': row['ISIN'],
-                     'SERIES': row['SERIES'],
-                     'company_name': row['COMPANY NAME'],
-                     'period_end': row['PERIOD_ENDED'],
-                     'XBRL Link': xbrl_url,
-                     'error_msg': f'Empty/Invalid url for %s [-]' % row['NSE Symbol'],
-                     'traceback': None
-                     }, index=[error_db_index])])
-            error_db_index = error_db_index + 1
-            n_errors = n_errors + 1
-            continue
+        if os.path.basename(xbrl_url) == '-' or xbrl_url not in xbrl_links_to_download:
+            assert False, f'Something went wrong! {xbrl_url}'
 
         try:
-            result = base_utils.download_xbrl_fr(xbrl_url, verbose=verbose)
-            assert result['outcome'], 'download_xbrl_file failed for %s' % xbrl_url
-
-            xbrl_archive.add(os.path.basename(xbrl_url), result['xbrl_string'])
-
-            isin = result['ISIN'] if result['ISIN'] != 'not-found' else row['ISIN']
-            # fix bse later
-            company_name = row['COMPANY NAME'] if exchange == 'nse' else result['company_name']
-
-            meta_data_df = pd.concat([
-                meta_data_df, pd.DataFrame(
-                    {'NSE Symbol': result['NSE Symbol'],
-                     'BSE Code': result['BSE Code'],
-                     'ISIN': isin,
-                     'SERIES':row['SERIES'],
-                     'company_name': company_name,
-                     'period': result['period'],
-                     'result_type': result['result_type'],
-                     'result_format': result['result_format'],
-                     'period_start': result['period_start'],
-                     'period_end': result['period_end'],
-                     'quarter_type': result['quarter_type'],
-                     'XBRL_archive': ARCHIVE_NAME,
-                     'XBRL_filename': os.path.basename(xbrl_url),
-                     'XBRL_data_size': len(result['xbrl_string']),
-                     'XBRL Link': xbrl_url
-                     }, index=[meta_data_index]
-                )])
-            meta_data_index = meta_data_index + 1
-            n_downloaded = n_downloaded + 1
-            if redo_errors:
-                redone_errors.append(idx)
+            xbrl_data = base_utils.get_xbrl(xbrl_url)
+            outcome, error_msg = True, ''
         except Exception as e:
-            if not redo_errors:
-                errors_df = pd.concat([
-                    errors_df, pd.DataFrame(
-                        {'NSE Symbol': row['NSE Symbol'],
-                         'ISIN': row['ISIN'],
-                         'SERIES': row['SERIES'],
-                         'company_name': row['COMPANY NAME'],
-                         'period_end': row['PERIOD_ENDED'],
-                         'XBRL Link':xbrl_url,
-                         'error_msg':e,
-                         'traceback':traceback.format_exc()
-                         }, index=[error_db_index])])
-                error_db_index = error_db_index + 1
-                n_errors = n_errors + 1
-        if n_downloaded > n_to_download:
+            outcome, error_msg = False, 'ERROR! %s' % e
+            xbrl_data = ''
+            n_errors += 1
+
+        if xbrl_archive is None:
+            """
+            1. check if archive with current sequence number exists.
+            2. if yes, open it and check if it has space. If yes, continue to use it.
+            3. if not, increase sequence number and create a new archive
+            """
+            archive_name = 'archive_%s' % ('%d' % archive_sequence_number).zfill(3)
+            archive_sub_folder = get_asf(archive_sequence_number, divider=ARCHIVES_PER_SUB_FOLDER)
+            archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s' % (archive_sub_folder, archive_name))
+
+            if os.path.exists(archive_path) and pygeneric_archiver.\
+                    Archiver(archive_path, mode='r').size() < ARCHIVE_MAX_SIZE:
+                update = True
+            else:
+                if os.path.exists(archive_path) and pygeneric_archiver.\
+                        Archiver(archive_path, mode='r').size() == ARCHIVE_MAX_SIZE:
+                    archive_sequence_number += 1  # messy for now
+                archive_name = 'archive_%s' % ('%d' % archive_sequence_number).zfill(3)
+                archive_sub_folder = get_asf(archive_sequence_number, divider=ARCHIVES_PER_SUB_FOLDER)
+                archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s' % (archive_sub_folder, archive_name))
+                update = False
+            xbrl_archive = pygeneric_archiver.Archiver(archive_path, mode='w', update=update)
+
+        filing_date = fr_filings_df.loc[fr_filings_df['xbrl'] == xbrl_url, 'filingDate'].values[-1]
+        xbrl_archive.add(xbrl_url, xbrl_data)
+        metadata_df = pd.concat(
+            [metadata_df, pd.DataFrame({'xbrl':xbrl_url,
+                                        'filingDate':filing_date,
+                                        'archive_path': archive_path,
+                                        'size': len(xbrl_data),
+                                        'outcome':outcome,
+                                        'error_msg':error_msg,
+                                        'run_timestamp':run_timestamp
+                                        }, index=[0])])
+
+        if xbrl_archive.size() >= ARCHIVE_MAX_SIZE:
+            ''' perform checkpoint '''
+            xbrl_archive.flush(create_parent_dir=True)
+            metadata_df['filingDate'] = pd.to_datetime(metadata_df['filingDate'])
+            metadata_df.sort_values(by='filingDate', inplace=True)
+            metadata_df.to_csv(METADATA_FILENAME, index=False)
+            xbrl_archive, archive_path = None, None  # make sure
+            archive_sequence_number += 1  # see messy above
+
+        n_downloaded += 1
+        if n_downloaded >= n_to_download:
             break
-    # ------------------------------------- end of for loop ------------------------------------
-    print(f'\nAll {xbrl_urls_df.shape[0]} files processed, summarizing & saving results ...')
 
-    meta_data_df.sort_values(by=['NSE Symbol', 'SERIES', 'result_type', 'period'], inplace=True)
-    meta_data_df.reset_index(drop=True, inplace=True)
+    if xbrl_archive is not None and n_downloaded > 0:
+        ''' last flush '''
+        xbrl_archive.flush(create_parent_dir=True)
+        metadata_df['filingDate'] = pd.to_datetime(metadata_df['filingDate'])
+        metadata_df.sort_values(by='filingDate', inplace=True)
+        metadata_df.to_csv(METADATA_FILENAME, index=False)
+        xbrl_archive, archive_path = None, None  # make sure
 
-    if redo_errors and len(redone_errors) > 0:
-        errors_df.drop(redone_errors, inplace=True)
-    errors_df.reset_index(drop=True, inplace=True)
-
-    if n_downloaded > 0:
-        common.utils.time_since_last(0)
-        xbrl_archive.flush()
-        print(f'xbrl_archive.flush() took {common.utils.time_since_last(0)} seconds')
-
-    meta_data_df.drop_duplicates(inplace=True, ignore_index=True)
-
-    if meta_data_df.shape[0] > 0:
-        meta_data_df.to_csv(META_DATA_DB, index=False)
-
-    if errors_df.shape[0] > 0:
-        errors_df.to_csv(ERRORS_DB, index=False)
-    elif redo_errors and os.path.exists(ERRORS_DB):
-        os.remove(ERRORS_DB)
-
-    print()
-    print(n_downloaded, 'XBRL files downloaded.')
-    print(n_skipped, 'XBRL files skipped.')
-    print(n_errors, 'XBRL files led to errors.')
-    print(f'META_DATA_DB shape:', meta_data_df.shape)
-    print(f'ERRORS_DB    shape:', errors_df.shape)
-
-    print('ALL OK')
+    print('\nXBRL downloads END')
+    print('\n%d xbrl\'s downloaded in this run. %d errors' % (n_downloaded, n_errors))
+    print('Whole metadata_df: %d rows, %d errors'
+          % (metadata_df.shape[0], metadata_df.loc[~metadata_df['outcome']].shape[0]))
