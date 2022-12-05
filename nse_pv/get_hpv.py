@@ -95,7 +95,7 @@ if __name__ == '__main__':
     symbols = sys.argv[2:] if len(sys.argv) > 2 else \
         ['NIFTY 50.IDX', 'NIFTY BANK.IDX', 'NIFTY 500.IDX',
          'ASIANPAINT.EQ', 'BRITANNIA.EQ', 'HDFC.EQ', 'ICICIBANK.EQ', 'IRCTC.EQ', 'JUBLFOOD.EQ',
-         'ZYDUSLIFE.EQ', 'PAYTM.EQ']
+         'TATASTEEL.EQ', 'ZYDUSLIFE.EQ']
 
     print(f'\nDownload Type: {download_type}\nSymbols: {symbols} ::: \n')
     download_all(symbols, download_type, verbose)

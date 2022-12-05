@@ -52,6 +52,7 @@ if __name__ == '__main__':
 
     sc_df = get_symbol_changes()
     sc_df = sc_df.loc[sc_df['Old Symbol'].isin(['CADILAHC', 'WABCOINDIA'])]
+    print(sc_df)
     assert [d.astype(str)[0:10] for d in sc_df['Date of Change'].values] == \
            ['2022-03-07', '2022-04-01']
 

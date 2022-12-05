@@ -14,7 +14,7 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygeneric.datetime_utils as datetime_utils
 import common.nse_symbols
-from settings import DATA_ROOT, CONFIG_DIR
+from settings import DATA_ROOT
 from pygeneric.archiver import Archiver
 
 SUB_PATH1 = '01_nse_pv/02_dr'
@@ -208,18 +208,23 @@ def process_cm_reports(year, symbols=None, verbose=False):
     symbols_to_process = all_symbols if symbols is None else symbols
     print(f'Processing {len(symbols_to_process)} symbols :::')
 
+    ''' i think this is fishy - closely check in future '''
     sc_df = common.nse_symbols.get_symbol_changes()
-    for symbol in symbols_to_process:
-        xx = sc_df.loc[sc_df['New Symbol'] == symbol]
-        if xx.shape[0] > 0:
-            df.loc[df['Symbol'] == xx['Old Symbol'].values[-1], 'Symbol'] = symbol
-    if verbose: print('time check (symbol changes):', datetime_utils.time_since_last(1), 'seconds')
+    for idx, row in sc_df.iterrows():
+        df.loc[df['Symbol'] == row['Old Symbol'], 'Symbol'] = row['New Symbol']
+        symbols_to_process.append(row['New Symbol'])
+        if row['Old Symbol'] in symbols_to_process:
+            symbols_to_process.remove(row['Old Symbol'])
+
+    if verbose:
+        print('time check (symbol changes):', datetime_utils.time_since_last(1), 'seconds')
 
     df = df.loc[df['Symbol'].isin(symbols_to_process)]
     df['Date'] = pd.to_datetime(df['Date'], format="%Y-%m-%d")
     df = df.sort_values(by=['Symbol', 'Date']).reset_index(drop=False)
-    if verbose: print(f'Done. {len(symbols_to_process)} processed. Data shape:', df.shape)
-    if verbose: print('time check (filtering):', datetime_utils.time_since_last(1), 'seconds')
+    if verbose:
+        print(f'Done. {len(symbols_to_process)} processed. Data shape:', df.shape)
+        print('time check (filtering):', datetime_utils.time_since_last(1), 'seconds')
 
     df = df[['Date', 'Symbol', 'Series', 'Open', 'High', 'Low', 'Close', 'Prev Close',
              'Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades',
