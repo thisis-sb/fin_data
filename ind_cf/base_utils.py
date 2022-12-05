@@ -6,9 +6,11 @@ TO DO
 ''' --------------------------------------------------------------------------------------- '''
 import glob
 import os
+import sys
 import pandas as pd
 import requests
 import xml.etree.ElementTree as ElementTree
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygeneric.http_utils as html_utils
 from settings import LOG_DIR
 
