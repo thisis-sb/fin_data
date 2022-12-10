@@ -11,14 +11,15 @@ import pandas as pd
 import requests
 import xml.etree.ElementTree as ElementTree
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pygeneric.http_utils as html_utils
-from settings import LOG_DIR
+import pygeneric.http_utils as pyg_html_utils
+import pygeneric.fin_utils as pyg_fin_utils
+from settings import DATA_ROOT, LOG_DIR
 
 SUB_PATH1 = '02_ind_cf'
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_xbrl(url):
-    response = requests.get(url, headers=html_utils.http_request_header())
+    response = requests.get(url, headers=pyg_html_utils.http_request_header())
     if response.status_code != 200:
         raise ValueError('get_xbrl: code = %d, link = [%s]' % (response.status_code, url))
     return response.content
@@ -26,7 +27,13 @@ def get_xbrl(url):
 def load_filings_fr(path_regex):
     fr_filings_files = glob.glob(path_regex)
     print('\nbase_utils.load_filings_fr: Loading %d fr_filings files ... ' % len(fr_filings_files), end='')
-    fr_filings_df = pd.concat([pd.read_csv(f) for f in fr_filings_files])
+
+    def rf(f):
+        x = pd.read_csv(f)
+        x['fileName'] = os.path.basename(f)
+        return x
+
+    fr_filings_df = pd.concat([rf(f) for f in fr_filings_files])
     print('Done. fr_filings_df.shape:', fr_filings_df.shape)
 
     empty_fr_xbrl_df = fr_filings_df.loc[fr_filings_df['xbrl'].str.endswith('/-')]
@@ -39,20 +46,6 @@ def load_filings_fr(path_regex):
     print('fr_filings_df: shape: %s, %d unique XBRLs\n'
           % (fr_filings_df.shape, len(fr_filings_df['xbrl'].unique())))
     return fr_filings_df
-
-
-def fy_and_quarter(period_end):
-    # YYYY-xxYY-Qx
-    if period_end == 'not-found':
-        return 'not-found'
-    qtr_map = {'06':'Q1', '09':'Q2', '12':'Q3', '03':'Q4'}
-    qtr = qtr_map[period_end[5:7]]
-    if qtr == 'Q4':
-        fy = '%d-%s' % (int(period_end[0:4])-1, period_end[0:4])
-    else:
-        fy = '%s-%d' % (period_end[0:4], int(period_end[0:4])+1)
-    return '%s-%s-%s' % (fy[0:4], fy[7:], qtr)
-
 
 def parse_xbrl_fr(xbrl_str):
     df = pd.DataFrame(columns=['tag', 'context'])
@@ -110,7 +103,7 @@ def parse_xbrl_fr(xbrl_str):
         'ISIN': ISIN,
         'period_start': period_start,
         'period_end': period_end,
-        'fy_and_qtr': fy_and_quarter(period_end),
+        'fy_and_qtr': pyg_fin_utils.ind_fy_and_qtr(period_end),
         'reporting_qtr': df.loc[df['tag'] == 'ReportingQuarter', 'value'].values[0],
         'result_type': result_type,
         'result_format': result_format,
@@ -138,4 +131,11 @@ if __name__ == '__main__':
         parsed_result['parsed_df'].to_csv(
             os.path.join(LOG_DIR, SUB_PATH1, f'parsed_df_{idx}.csv'), index=False)
         print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
+        print()
     print('All OK')
+
+    print('Testing load_filings_fr:::')
+    f_df = load_filings_fr(
+        os.path.join(DATA_ROOT, f'02_ind_cf/nse_fr_filings/CF_FR_*.csv'))
+    print(f_df.columns)
+    print(f_df['fileName'].unique())

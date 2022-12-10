@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import datetime
 import pandas as pd
-import pygeneric.http_utils as html_utils
+import pygeneric.http_utils as pyg_html_utils
 
 OUTPUT_FOLDER = os.path.join(os.getenv('DATA_DIR'), '01_fin_data/02_ind_cf/nse_fr_filings')
 
@@ -33,7 +33,7 @@ def get_nse_fr_filings(year):
     for period in ['', 'HalfYearly', 'Annual', 'Others']:
         print('  [%s]: ' % period, end='')
         url = url_base + '&period=%s' % period
-        cf_fr_json = html_utils.http_get(url)
+        cf_fr_json = pyg_html_utils.http_get(url)
         if len(cf_fr_json) == 0:
             print('no data, ignoring')
         else:

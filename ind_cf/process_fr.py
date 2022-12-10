@@ -12,15 +12,15 @@ import pandas as pd
 import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utils
-import pygeneric.archiver as pygeneric_archiver
-import pygeneric.datetime_utils as pyg_du
+import pygeneric.archiver as pyg_archiver
+import pygeneric.datetime_utils as pyg_dt_utils
 from settings import DATA_ROOT
 
 SUB_PATH1 = '02_ind_cf'
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    TO_PROCESS = 0
+    n_to_download = 5000 if len(sys.argv) != 2 else int(sys.argv[1])
     exchange = 'nse'
     ARCHIVE_FOLDER = os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_xbrl_archive')
     METADATA_S1 = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
@@ -30,17 +30,42 @@ if __name__ == '__main__':
     metadata_s1_df = pd.read_csv(METADATA_S1)
     metadata_s1_df.sort_values(by='archive_path', inplace=True)
     metadata_s1_df.reset_index(drop=True, inplace=True)
-
     print('metadata_s1_df, shape:', metadata_s1_df.shape)
-    if TO_PROCESS != 0:
-        metadata_s1_df = metadata_s1_df.tail(TO_PROCESS).reset_index(drop=True)
-        print('Processing %d only.' % metadata_s1_df.shape[0])
 
-    t1 = pyg_du.time_since_last(0)
-    archive_path, archive_obj, n_errors, n_no_xbrl_data = None, None, 0, 0
-    metadata_s2_df, metadata_s2_errors_df = pd.DataFrame(), pd.DataFrame()
+    if os.path.exists(METADATA_S2[0]):
+        metadata_s2_df = pd.read_csv(METADATA_S2[0])
+        print('Pre-existing %s, shape: %s' % (os.path.basename(METADATA_S2[0]), metadata_s2_df.shape))
+        """
+        try:
+            metadata_s2_errors_df = pd.read_csv(METADATA_S2[1])
+            print('Pre-existing %s, shape: %s' %
+                  (os.path.basename(METADATA_S2[1]), metadata_s2_errors_df.shape))
+        except pd.errors.EmptyDataError:
+            metadata_s2_errors_df = pd.DataFrame()
+        """
+    else:
+        metadata_s2_df = pd.DataFrame()
+    metadata_s2_errors_df = pd.DataFrame()  # errors should always be processed
+
+    ''' drop already processed '''
+    if metadata_s2_df.shape[0] > 0:
+        metadata_s1_df = metadata_s1_df.loc[~metadata_s1_df['xbrl'].isin(metadata_s2_df['xbrl'])]
+    print('In all, %d UN-processed metadata_s1 rows' % metadata_s1_df.shape[0], end='. ')
+    if n_to_download != 0:
+        metadata_s1_df = metadata_s1_df.tail(n_to_download).reset_index(drop=True)
+        print('Processing ONLY the last %d of those.' % metadata_s1_df.shape[0])
+    else:
+        print('Processing all of those.')
+
+    print('\nTo process: metadata_s1_df.shape:', metadata_s1_df.shape)
+    if metadata_s1_df.shape[0] == 0:
+        print('Nothing to do, exit')
+        exit()
+
+    t1 = pyg_dt_utils.time_since_last(0)
+    archive_path, archive_obj, n_processed, n_errors, n_no_xbrl_data = None, None, 0, 0, 0
     for idx, row in metadata_s1_df.iterrows():
-        if idx > 0 and idx % 1000 == 0:
+        if idx > 0 and idx % 500 == 0:
             metadata_s2_df.reset_index(drop=True, inplace=True)
             metadata_s2_df.to_csv(METADATA_S2[0], index=False)
             metadata_s2_errors_df.reset_index(drop=True, inplace=True)
@@ -48,15 +73,15 @@ if __name__ == '__main__':
             print('metadata_s2 checkpoint done. metadata_s2_df.shape:', metadata_s2_df.shape,
                   'metadata_s2_errors_df.shape:', metadata_s2_errors_df.shape)
         if idx % 100 == 0:
-            print('%d / %d done (time: %d s)' % (idx, metadata_s1_df.shape[0], pyg_du.time_since_last(0)))
+            print('%d / %d done (time: %d s)' % (idx, metadata_s1_df.shape[0], pyg_dt_utils.time_since_last(0)))
 
         if not row['outcome'] or row['size'] <= 0:
             n_no_xbrl_data += 1
             continue
 
         if archive_path != row['archive_path']:
-            print('  Opening:', os.path.basename(row['archive_path']))
-            archive_obj = pygeneric_archiver.Archiver(row['archive_path'], mode='r')
+            print('  Opening:', row['archive_path'].split('year_')[-1])
+            archive_obj = pyg_archiver.Archiver(row['archive_path'], mode='r')
             archive_path = row['archive_path']
         try:
             parsed_result = base_utils.parse_xbrl_fr(archive_obj.get(row['xbrl']))
@@ -77,6 +102,7 @@ if __name__ == '__main__':
                                                'outcome':parsed_result['outcome'],
                                                'filingDate':row['filingDate']
                                                }, index=[idx])])
+            n_processed += 1
         except Exception as e:
             n_errors += 1
             metadata_s2_errors_df = pd.concat(
@@ -90,7 +116,10 @@ if __name__ == '__main__':
     metadata_s2_df.to_csv(METADATA_S2[0], index=False)
     metadata_s2_errors_df.reset_index(drop=True, inplace=True)
     metadata_s2_errors_df.to_csv(METADATA_S2[1], index=False)
-    print('Final metadata_s2 saved. metadata_s2_df.shape:', metadata_s2_df.shape,
-          'metadata_s2_errors_df.shape:', metadata_s2_errors_df.shape)
+    print('Processing finished.')
 
-    print('All done. %d / %d had errors' % (n_errors, (metadata_s1_df.shape[0] - n_no_xbrl_data)))
+    print('\nFinal metadata_s2 saved. metadata_s2_df.shape:', metadata_s2_df.shape,
+          'metadata_s2_errors_df.shape:', metadata_s2_errors_df.shape)
+    print('Summary: %d success, %d errors, %d with no xbrl data (crosscheck: %s)'
+          % (n_processed, n_errors, n_no_xbrl_data,
+             (n_processed + n_errors + n_no_xbrl_data) == metadata_s1_df.shape[0]))

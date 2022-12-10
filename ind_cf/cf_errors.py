@@ -11,7 +11,7 @@ import traceback
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utils
-import pygeneric.misc as pygeneric_misc
+import pygeneric.misc as pyg_misc
 from settings import DATA_ROOT, LOG_DIR
 
 SUB_PATH1 = '02_ind_cf'
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     print('Re-checking errors ...')
     error_df = pd.DataFrame()
     for idx, row in metadata_df.iterrows():
-        print(pygeneric_misc.progress_str(idx + 1, metadata_df.shape[0]), end='')
+        print(pyg_misc.progress_str(idx + 1, metadata_df.shape[0]), end='')
         sys.stdout.flush()
         xbrl_url = row['xbrl']
 

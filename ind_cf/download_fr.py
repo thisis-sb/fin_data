@@ -12,8 +12,8 @@ import glob
 import datetime
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pygeneric.archiver as pygeneric_archiver
-import pygeneric.misc as pygeneric_misc
+import pygeneric.archiver as pyg_archiver
+import pygeneric.misc as pyg_misc
 import base_utils
 from settings import DATA_ROOT
 
@@ -22,7 +22,7 @@ CONFIG_SYM = '02_nse_symbols'
 
 ''' --------------------------------------------------------------------------------------- '''
 def current_asn(xp):
-    al = glob.glob('%s/**/archive_*' % xp)
+    al = glob.glob('%s/**/**/archive_*' % xp)
     assert len(al) > 0, f'{xp}: Something went really bad. len(al): {len(al)}'
     current_archive_path = sorted(al)[-1]
     return int(os.path.basename(current_archive_path).split('_')[1])
@@ -69,10 +69,14 @@ if __name__ == '__main__':
     run_timestamp = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M-%S')
     xbrl_archive, archive_path, n_downloaded, n_errors = None, None, 0, 0
     for idx, xbrl_url in enumerate(xbrl_links_to_download):
-        pygeneric_misc.print_progress_str(idx + 1, len(xbrl_links_to_download))
+        pyg_misc.print_progress_str(idx + 1, len(xbrl_links_to_download))
 
         if os.path.basename(xbrl_url) == '-' or xbrl_url not in xbrl_links_to_download:
             assert False, f'Something went wrong! {xbrl_url}'
+
+        filing_date = fr_filings_df.loc[fr_filings_df['xbrl'] == xbrl_url, 'filingDate'].values[-1]
+        fileName    = fr_filings_df.loc[fr_filings_df['xbrl'] == xbrl_url, 'fileName'].values[-1]
+        filingYear  = 'year_%s' % fileName.split('_')[-1].split('.')[0]
 
         try:
             xbrl_data = base_utils.get_xbrl(xbrl_url)
@@ -90,25 +94,28 @@ if __name__ == '__main__':
             """
             archive_name = 'archive_%s' % ('%d' % archive_sequence_number).zfill(3)
             archive_sub_folder = get_asf(archive_sequence_number, divider=ARCHIVES_PER_SUB_FOLDER)
-            archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s' % (archive_sub_folder, archive_name))
 
-            if os.path.exists(archive_path) and pygeneric_archiver.\
+            archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s/%s'
+                                        % (filingYear, archive_sub_folder, archive_name))
+
+            if os.path.exists(archive_path) and pyg_archiver.\
                     Archiver(archive_path, mode='r').size() < ARCHIVE_MAX_SIZE:
                 update = True
             else:
-                if os.path.exists(archive_path) and pygeneric_archiver.\
+                if os.path.exists(archive_path) and pyg_archiver.\
                         Archiver(archive_path, mode='r').size() == ARCHIVE_MAX_SIZE:
                     archive_sequence_number += 1  # messy for now
                 archive_name = 'archive_%s' % ('%d' % archive_sequence_number).zfill(3)
                 archive_sub_folder = get_asf(archive_sequence_number, divider=ARCHIVES_PER_SUB_FOLDER)
-                archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s' % (archive_sub_folder, archive_name))
+                archive_path = os.path.join(ARCHIVE_FOLDER, '%s/%s/%s'
+                                            % (filingYear, archive_sub_folder, archive_name))
                 update = False
-            xbrl_archive = pygeneric_archiver.Archiver(archive_path, mode='w', update=update)
+            xbrl_archive = pyg_archiver.Archiver(archive_path, mode='w', update=update)
 
-        filing_date = fr_filings_df.loc[fr_filings_df['xbrl'] == xbrl_url, 'filingDate'].values[-1]
         xbrl_archive.add(xbrl_url, xbrl_data)
         metadata_df = pd.concat(
             [metadata_df, pd.DataFrame({'xbrl':xbrl_url,
+                                        'filingYear':filingYear,
                                         'filingDate':filing_date,
                                         'archive_path': archive_path,
                                         'size': len(xbrl_data),
@@ -119,6 +126,9 @@ if __name__ == '__main__':
 
         if xbrl_archive.size() >= ARCHIVE_MAX_SIZE:
             ''' perform checkpoint '''
+            filingYearDir = os.path.dirname(os.path.dirname(archive_path))
+            if not os.path.exists(filingYearDir):
+                os.mkdir(filingYearDir)
             xbrl_archive.flush(create_parent_dir=True)
             metadata_df['filingDate'] = pd.to_datetime(metadata_df['filingDate'])
             metadata_df.sort_values(by='filingDate', inplace=True)
@@ -132,6 +142,9 @@ if __name__ == '__main__':
 
     if xbrl_archive is not None and n_downloaded > 0:
         ''' last flush '''
+        filingYearDir = os.path.dirname(os.path.dirname(archive_path))
+        if not os.path.exists(filingYearDir):
+            os.mkdir(filingYearDir)
         xbrl_archive.flush(create_parent_dir=True)
         metadata_df['filingDate'] = pd.to_datetime(metadata_df['filingDate'])
         metadata_df.sort_values(by='filingDate', inplace=True)
