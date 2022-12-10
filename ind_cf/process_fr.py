@@ -2,7 +2,6 @@
 Process downloaded FR's in metadata_s1:
 1. perform sanity checks
 2. prepare metadata_step2
-TO DO: process only delta from metadata_s1 to save time
 """
 ''' --------------------------------------------------------------------------------------- '''
 
