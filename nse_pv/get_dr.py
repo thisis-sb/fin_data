@@ -132,7 +132,7 @@ def nse_download_daily_reports(year_str, month_str):
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    months = ['OCT2022'] if len(sys.argv) == 1 else sys.argv[1:]
+    months = [datetime.date.today().strftime('%b%Y').upper()] if len(sys.argv) == 1 else sys.argv[1:]
 
     for m in months:
         assert m[0:3] in ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
