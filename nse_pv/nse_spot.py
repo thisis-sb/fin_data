@@ -7,7 +7,7 @@ import os
 import sys
 import glob
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from nsetools import Nse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import common.nse_cf_ca
@@ -261,7 +261,8 @@ if __name__ == '__main__':
 
     print(f'\nTesting basic nse_spot ...\n')
     symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC',
-               'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
+               'JUBLFOOD', 'TATASTEEL']
+    symbols_other = ['ZYDUSLIFE']
 
     nse_pvdata = NseSpotPVData(verbose=False)
 
@@ -271,9 +272,9 @@ if __name__ == '__main__':
         x.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'df_diagnostic.csv'), index=False)
         return f'{c1}/{c2} {x.loc[x[c1] != x[c2]].shape[0]} rows mismatch'
 
-    def check_data(dates):
+    def check_data(symbol_list, dates):
         print('Checking for dates', dates, '...')
-        for symbol in symbols:
+        for symbol in symbol_list:
             print(f'  {symbol} ...', end=' ')
             df1 = nse_pvdata.get_pv_data(symbol, series='EQ', from_to=dates)
             df2 = nse_pvdata.get_pv_data_api(symbol, from_to=dates)
@@ -299,14 +300,18 @@ if __name__ == '__main__':
             print('OK')
         print()
 
+    end_date = (datetime.today() - timedelta(days=3)).strftime('%Y-%m-%d')
+    check_data(symbols, ['2021-01-01', '2022-03-31'])
+    check_data(symbols, ['2022-01-01', '2022-11-30'])
+    check_data(symbols, ['2019-01-01', '2022-03-31'])
+    check_data(symbols, ['2021-04-01', '2022-03-31'])
+    check_data(symbols, ['2022-04-01', end_date])
+    check_data(symbols_other, ['2019-04-01', '2022-12-05'])
 
-    check_data(['2021-01-01', '2022-03-31'])
-    check_data(['2022-01-01', '2022-11-30'])
-    check_data(['2019-01-01', '2022-03-31'])
-
+    '''TO DO: Further improvements / strengthening for all below'''
     print('\nTesting NseSpotPVData().get_pv_data_multiple ...', end='')
     multi_df = NseSpotPVData(). \
-        get_pv_data_multiple(symbols=symbols,
+        get_pv_data_multiple(symbols=symbols + symbols_other,
                              from_to=['2021-07-01', '2022-06-30'], get52wkhl=True). \
         sort_values(by=['Date', 'Symbol'])
     print('Done.', multi_df.shape, len(multi_df['Symbol'].unique()))
