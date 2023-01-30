@@ -71,7 +71,7 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbol, series='EQ', from_to=None, n_days=0, adjust=True):
+    def get_pv_data(self, symbol, series='EQ', after=None, from_to=None, n_days=0, adjust=True):
         if self.pv_data is None:
             return None
 
@@ -79,7 +79,9 @@ class NseSpotPVData:
         if series is not None:
             df = df.loc[df['Series'] == series]
 
-        if from_to is not None:
+        if after is not None:
+            df = df.loc[df['Date'] >= datetime.strptime(after, '%Y-%m-%d')].reset_index(drop=True)
+        elif from_to is not None:
             date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
             date2 = datetime.strptime(from_to[1], '%Y-%m-%d')
             df = df.loc[(df['Date'] >= date1) & (df['Date'] <= date2)].reset_index(drop=True)
@@ -106,7 +108,7 @@ class NseSpotPVData:
         df = df.sort_values(by='Date').reset_index(drop=True)
 
         if after is not None:
-            df = df.loc[df['Date'] >= datetime.strptime(after, '%Y-%m-%d')]
+            df = df.loc[df['Date'] >= datetime.strptime(after, '%Y-%m-%d')].reset_index(drop=True)
         elif from_to is not None:
             date1 = datetime.strptime(from_to[0], '%Y-%m-%d')
             date2 = datetime.strptime(from_to[1], '%Y-%m-%d')
