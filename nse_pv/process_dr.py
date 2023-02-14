@@ -381,7 +381,7 @@ def get_52week_high_low(df):
 if __name__ == '__main__':
     tst_syms = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'ZYDUSLIFE']
     verbose = False
-    year = 2022 if len(sys.argv) == 1 else int(sys.argv[1])
+    year = datetime.date.today().year if len(sys.argv) == 1 else int(sys.argv[1])
     print(f'\nProcessing daily reports for year {year}...')
     os.makedirs(os.path.join(DATA_ROOT, SUB_PATH2, f'{year}'), exist_ok=True)
 
