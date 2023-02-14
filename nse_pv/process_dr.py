@@ -199,7 +199,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
     df['Traded Value'] = df['Traded Value']*100000
 
     df = df.merge(df2[['Date', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']],
-                  on=['Date', 'Symbol', 'Series'], how='inner').reset_index(drop=True)
+                  on=['Date', 'Symbol', 'Series'], how='left').reset_index(drop=True)
     if verbose:
         print('time check (load files):', datetime_utils.time_since_last(1), 'seconds')
 
