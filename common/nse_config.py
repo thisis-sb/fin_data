@@ -2,6 +2,7 @@
 Get all NSE config files (symbols, indices, et al)
 Usage: 1 or 2-year
 """
+''' --------------------------------------------------------------------------------------- '''
 
 import os
 import sys
@@ -11,6 +12,46 @@ import pygeneric.http_utils as html_utils
 from settings import CONFIG_DIR
 
 ''' --------------------------------------------------------------------------------------- '''
+def sectoral_indices():
+    import pygeneric.http_utils as pyg_http_utils
+    indices = [
+        'NIFTY BANK',
+        'NIFTY AUTO',
+        'NIFTY FINANCIAL SERVICES',
+        'NIFTY FMCG',
+        'NIFTY IT',
+        'NIFTY MEDIA',
+        'NIFTY METAL',
+        'NIFTY PHARMA',
+        'NIFTY PSU BANK',
+        'NIFTY PRIVATE BANK',
+        'NIFTY REALTY',
+        'NIFTY HEALTHCARE INDEX',
+        'NIFTY CONSUMER DURABLES',
+        'NIFTY OIL & GAS'
+    ]
+    http_obj = pyg_http_utils.HttpDownloads()
+
+    for index_name in indices:
+        url = 'https://www.nseindia.com/api/equity-stockIndices' + \
+              '?index=%s' % index_name.replace(' ', '%20').replace('&', '%26')
+        data, _ = http_obj.http_get(url)
+        df = []
+        for x in data['data']:
+            if x['priority'] == 0 and x['symbol'] == x['meta']['symbol']:
+                df.append({'Symbol': x['symbol'],
+                           'ISIN': x['meta']['isin'],
+                           'Series': x['series'],
+                           'Company Name': x['meta']['companyName'],
+                           'Industry': x['meta']['industry'] if 'industry' in x[
+                               'meta'].keys() else None
+                           })
+        df = pd.DataFrame(df)
+        df.to_csv(CONFIG_DIR + '/01_nse_symbols/sectoral_ind_%s.csv'
+                  % index_name.replace(' ', '_'), index=False)
+
+    return
+
 def get_config(opt=None):
     # 1. NSE symbols & indices
     clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
@@ -33,11 +74,14 @@ def get_config(opt=None):
                         }
          },
         {'urls': ['https://archives.nseindia.com/content/indices/ind_nifty50list.csv',
+                  'https://archives.nseindia.com/content/indices/ind_niftynext50list.csv',
                   'https://archives.nseindia.com/content/indices/ind_nifty100list.csv',
+                  'https://archives.nseindia.com/content/indices/ind_nifty200list.csv',
                   'https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv',
                   'https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv',
                   'https://archives.nseindia.com/content/indices/ind_nifty500list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv'
+                  'https://archives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv',
+                  'https://archives.nseindia.com/content/indices/ind_niftytotalmarket_list.csv'
                   ],
          'column_map': {'Symbol': clean_cols[0], 'ISIN Code': clean_cols[1],
                         'Series': clean_cols[2], 'Company Name': clean_cols[3],
@@ -55,6 +99,11 @@ def get_config(opt=None):
             df.to_csv(CONFIG_DIR + '/01_nse_symbols/%s' % os.path.basename(url), index=False)
             print('Done, shape:', df.shape)
 
+    ''' sectoral indices '''
+    print('Downloading sectoral indices ...', end=' ')
+    sectoral_indices()
+    print('Done')
+
     # 2. NSE ETF list
     print('Downloading eq_etfseclist.csv', end=' ... ')
     url = 'https://archives.nseindia.com/content/equities/eq_etfseclist.csv'
@@ -63,7 +112,8 @@ def get_config(opt=None):
                 ' Face Value': clean_cols[4], ' Market Lot': clean_cols[6],
                 ' Date of Listing': clean_cols[7]
                 }
-    df = pd.read_excel(url, sheet_name='in')
+    # before - as csv was in fact an excel --> df = pd.read_excel(url, sheet_name='in')
+    df = pd.read_csv(url, encoding='cp1252')
     df.rename(columns=cols_map, inplace=True)
     df = df[list(cols_map.values())]
     df.to_csv(CONFIG_DIR + '/01_nse_symbols/%s' % os.path.basename(url), index=False)
