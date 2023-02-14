@@ -30,7 +30,7 @@ if __name__ == '__main__':
         os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_filings/CF_FR_*.csv'))
 
     print('Re-checking errors ...')
-    error_df = pd.DataFrame()
+    successes, errors = [], []
     for idx, row in metadata_df.iterrows():
         print(pyg_misc.progress_str(idx + 1, metadata_df.shape[0]), end='')
         sys.stdout.flush()
@@ -47,14 +47,27 @@ if __name__ == '__main__':
         n_filing_entries = len(xbrl_filing_info['symbol'].unique())
         if n_filing_entries > 1:
             print('\nOOPS: %d entries in fr_filings_df for %s' % (n_filing_entries, xbrl_url))
-        error_df = pd.concat([error_df,
-                              pd.DataFrame({'xbrl': xbrl_url,
-                                            'size': len(xbrl_data),
-                                            'outcome': outcome,
-                                            'symbol':xbrl_filing_info['symbol'].values[0],
-                                            'filingDate':xbrl_filing_info['filingDate'].values[0],
-                                            'error_msg': error_msg
-                                            }, index=[0])])
-    error_df.reset_index(drop=True, inplace=True)
-    error_df.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'error_df.csv'), index=False)
-    print('\nDone. error_df.shape:', error_df.shape)
+
+        res = {'xbrl': xbrl_url,
+               'size': len(xbrl_data),
+               'outcome': outcome,
+               'symbol':xbrl_filing_info['symbol'].values[0],
+               'companyName': xbrl_filing_info['companyName'].values[0],
+               'financialYear': xbrl_filing_info['financialYear'].values[0],
+               'period': xbrl_filing_info['period'].values[0],
+               'relatingTo': xbrl_filing_info['relatingTo'].values[0],
+               'filingDate':xbrl_filing_info['filingDate'].values[0],
+               'error_msg': error_msg
+               }
+        successes.append(res) if outcome is True else errors.append(res)
+    print('\nDone')
+
+    if len(successes) > 0:
+        successes = pd.DataFrame(successes)
+        successes.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'successes.csv'), index=False)
+        print('  %d successful, stored in successes.csv' % successes.shape[0])
+
+    if len(errors) > 0:
+        errors = pd.DataFrame(errors)
+        errors.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'errors.csv'), index=False)
+        print('  %d failed, stored in errors.csv' % errors.shape[0])
