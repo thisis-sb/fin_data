@@ -8,15 +8,13 @@ import os
 import sys
 import pandas as pd
 import re
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from settings import CONFIG_DIR, CUTOFF_DATE
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_corporate_actions(symbol):
-    ca_files = glob.glob(os.path.join(CONFIG_DIR, '02_nse_cf_ca/CF_CA_*.csv'))
+def get_corporate_actions(symbol, cutoff_date='2018-01-01'):
+    ca_files = glob.glob(os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca/CF_CA_*.csv'))
     ca_df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
     ca_df['Ex Date'] = pd.to_datetime(pd.to_datetime(ca_df['Ex Date']), '%Y-%m-%d')
-    ca_df = ca_df.loc[ca_df['Ex Date'] >= CUTOFF_DATE]
+    ca_df = ca_df.loc[ca_df['Ex Date'] >= cutoff_date]
     ca_df = ca_df.loc[(ca_df['Series'] == 'EQ') & (ca_df['Symbol'] == symbol)]
     ca_df.reset_index(inplace=True, drop=True)
 

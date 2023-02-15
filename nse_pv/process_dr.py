@@ -1,6 +1,6 @@
 """
 NSE process daily market reports
-Usage: year
+Usage: [year]
 """
 ''' --------------------------------------------------------------------------------------- '''
 
@@ -11,21 +11,19 @@ import glob
 from io import BytesIO
 from zipfile import ZipFile
 import pandas as pd
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygeneric.datetime_utils as datetime_utils
-import common.nse_symbols
-from settings import DATA_ROOT
+import fin_data.common.nse_symbols as nse_symbols
 from pygeneric.archiver import Archiver
 
-SUB_PATH1 = '01_nse_pv/02_dr'
-SUB_PATH2 = os.path.join(SUB_PATH1, 'processed')
+PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
+PATH_2 = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr/processed')
 
 ''' --------------------------------------------------------------------------------------- '''
 def remove_existing_files(file_regex, verbose=False):
     datetime_utils.time_since_last(0)
     datetime_utils.time_since_last(1)
 
-    files_to_remove = glob.glob(os.path.join(DATA_ROOT, SUB_PATH2, file_regex))
+    files_to_remove = glob.glob(os.path.join(PATH_2, file_regex))
 
     if len(files_to_remove) > 0:
         if verbose: print(f'Removing {len(files_to_remove)} files', end='. ')
@@ -42,7 +40,7 @@ def process_index_reports(year, verbose=False):
     datetime_utils.time_since_last(0)
     datetime_utils.time_since_last(1)
 
-    archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/indices_close.zip'))
+    archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/indices_close.zip'))
     if verbose:
         print(len(archive_files), 'archive files:')
         print(archive_files)
@@ -59,7 +57,7 @@ def process_index_reports(year, verbose=False):
     df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y')
     df = df.sort_values(by='Date').reset_index(drop=True)
 
-    df.to_parquet(os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/index_bhavcopy_all.csv.parquet'),
+    df.to_parquet(os.path.join(PATH_2, f'{year}/index_bhavcopy_all.csv.parquet'),
                   index=False, engine='pyarrow', compression='gzip')
 
     if verbose:
@@ -80,7 +78,7 @@ def process_etf_reports(year, verbose=False):
     datetime_utils.time_since_last(0)
     datetime_utils.time_since_last(1)
 
-    archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/PR.zip'))
+    archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/PR.zip'))
     if verbose:
         print(len(archive_files), 'archive files:')
         print(archive_files)
@@ -96,7 +94,7 @@ def process_etf_reports(year, verbose=False):
         def read_etf(bytes, etf_file_name):
             if verbose:
                 print(f'Reading {etf_file_name}, ', end='')
-            df_x = pd.read_csv(bytes)
+            df_x = pd.read_csv(bytes, encoding='cp1252')
             dtstr = etf_file_name.split('.')[0][3:]
             df_x['Date'] = f'20%s-%s-%s' % (dtstr[4:], dtstr[2:4], dtstr[0:2])
             if verbose:
@@ -125,7 +123,7 @@ def process_etf_reports(year, verbose=False):
     df.insert(3, 'SECURITY', df.pop('SECURITY'))
     df.insert(4, 'Series', df.pop('Series'))
 
-    df.to_parquet(os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/etf_bhavcopy_all.csv.parquet'),
+    df.to_parquet(os.path.join(PATH_2, f'{year}/etf_bhavcopy_all.csv.parquet'),
                   index=False, engine='pyarrow', compression='gzip')
 
     if verbose:
@@ -145,7 +143,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
     datetime_utils.time_since_last(0)
     datetime_utils.time_since_last(1)
 
-    archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/cm_bhavcopy.zip'))
+    archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/cm_bhavcopy.zip'))
     if verbose:
         print(len(archive_files), 'cm_bhavcopy files:')
         print(archive_files)
@@ -161,7 +159,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
     df = pd.concat([read_cm_bhavcopy_files(f, verbose) for f in archive_files], axis=0)
     df = df[[col for col in df.columns if 'Unnamed' not in col]]
 
-    archive_files = glob.glob(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/MTO.zip'))
+    archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/MTO.zip'))
     if verbose:
         print(len(archive_files), 'MTO files:')
         print(archive_files)
@@ -209,7 +207,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
     print(f'Processing {len(symbols_to_process)} symbols :::')
 
     ''' i think this is fishy - closely check in future '''
-    sc_df = common.nse_symbols.get_symbol_changes()
+    sc_df = nse_symbols.get_symbol_changes()
     for idx, row in sc_df.iterrows():
         df.loc[df['Symbol'] == row['Old Symbol'], 'Symbol'] = row['New Symbol']
         symbols_to_process.append(row['New Symbol'])
@@ -229,10 +227,10 @@ def process_cm_reports(year, symbols=None, verbose=False):
     df = df[['Date', 'Symbol', 'Series', 'Open', 'High', 'Low', 'Close', 'Prev Close',
              'Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades',
              'Delivery Volume', 'Delivery Volume %']]
-    df.to_parquet(os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/cm_bhavcopy_all.csv.parquet'),
+    df.to_parquet(os.path.join(PATH_2, f'{year}/cm_bhavcopy_all.csv.parquet'),
                   index=False, engine='pyarrow', compression='gzip')
 
-    dates_range = df['Date'].values
+    dates_range = sorted(df['Date'].unique())
     first_date  = dates_range[0].astype('datetime64[D]')
     last_date   = dates_range[-1].astype('datetime64[D]')
     date_1yago  = datetime.datetime(last_date.astype(object).year - 1,
@@ -383,7 +381,7 @@ if __name__ == '__main__':
     verbose = False
     year = datetime.date.today().year if len(sys.argv) == 1 else int(sys.argv[1])
     print(f'\nProcessing daily reports for year {year}...')
-    os.makedirs(os.path.join(DATA_ROOT, SUB_PATH2, f'{year}'), exist_ok=True)
+    os.makedirs(os.path.join(PATH_2, f'{year}'), exist_ok=True)
 
     print('Removing existing files: ', end='')
     remove_existing_files(f'{year}/*_bhavcopy*.csv*', verbose=verbose)
@@ -398,17 +396,14 @@ if __name__ == '__main__':
     print('Processing ETF Daily Reports ... Done\n')
 
     print('Processing CM Daily Reports ... Start')
-    """eq_l = pd.read_csv(os.path.join(CONFIG_DIR, '02_nse_symbols/EQUITY_L.csv'))
-    eq_l = eq_l.loc[eq_l[' SERIES'] == 'EQ']
-    eql_syms = eq_l['SYMBOL']
-    symbols = sorted(list(set(eql_syms) |
-                          set(common.nse_symbols.get_symbols(['ind_my_custom_index']))))"""
     symbols = None  # tst_syms
     process_cm_reports(year, symbols=symbols, verbose=verbose)
     print('Processing CM Daily Reports ... Done\n')
 
-    """print('FAO processing ... Start')
+    """
+    print('FAO processing ... Start')
     # symbols = tst_syms + ['NIFTY', 'BANKNIFTY']
     symbols = list(api.nse_symbols.get_symbols(['ind_nifty100list'])) + ['NIFTY', 'BANKNIFTY']
     process_fao_bhavcopy(year, symbols=symbols, n_days=n_days, verbose=verbose)
-    print('FAO processing ... Done')"""
+    print('FAO processing ... Done')
+    """

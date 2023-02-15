@@ -3,11 +3,15 @@ Download MF NAV files from AMFI website
 Usage: dd-mmm-yyyy [dd-mmm-yyyy ...]
 """
 ''' --------------------------------------------------------------------------------------- '''
+
 import os
 import sys
 import pandas as pd
 from datetime import datetime, timedelta
 
+OUT_DIR = os.path.join(os.getenv('DATA_ROOT'), '09_amfi')
+
+''' --------------------------------------------------------------------------------------- '''
 def get_raw_amfi_data(last_date):
     date_from = (datetime.strptime(last_date, '%d-%b-%Y') - timedelta(days=4)).strftime('%d-%b-%Y')
     url_base = 'https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx'
@@ -47,7 +51,6 @@ if __name__ == '__main__':
         month = f'{month}' if month > 9 else f'0{month}'
         day   = f'{day}' if day > 9 else f'0{day}'
 
-        OUT_DIR = os.getenv('DATA_DIR') + f'/01_fin_data/05_amfi/navs-{year}'
         os.makedirs(OUT_DIR, exist_ok=True)
-        raw_navs.to_csv(OUT_DIR + f'/navs-{year}-{month}-{day}.csv', index=False)
+        raw_navs.to_csv(os.path.join(OUT_DIR, f'navs-{year}/navs-{year}-{month}-{day}.csv'), index=False)
         print('Done & Saved')

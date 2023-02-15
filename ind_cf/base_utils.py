@@ -10,12 +10,10 @@ import sys
 import pandas as pd
 import requests
 import xml.etree.ElementTree as ElementTree
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygeneric.http_utils as pyg_html_utils
 import pygeneric.fin_utils as pyg_fin_utils
-from settings import DATA_ROOT, LOG_DIR
 
-SUB_PATH1 = '02_ind_cf'
+LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_xbrl(url):
@@ -37,7 +35,7 @@ def load_filings_fr(path_regex):
     print('Done. fr_filings_df.shape:', fr_filings_df.shape)
 
     empty_fr_xbrl_df = fr_filings_df.loc[fr_filings_df['xbrl'].str.endswith('/-')]
-    empty_fr_xbrl_df.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'empty_fr_xbrl_df.csv'), index=False)
+    empty_fr_xbrl_df.to_csv(os.path.join(LOG_DIR, 'empty_fr_xbrl_df.csv'), index=False)
     fr_filings_df.drop(empty_fr_xbrl_df.index, inplace=True)
     print('Dropped %d filings with empty fr xbrl links' % empty_fr_xbrl_df.shape[0])
     print('Net fr_filings_df.shape:', fr_filings_df.shape)
@@ -129,13 +127,13 @@ if __name__ == '__main__':
         parsed_result = parse_xbrl_fr(xbrl_data)
         [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
         parsed_result['parsed_df'].to_csv(
-            os.path.join(LOG_DIR, SUB_PATH1, f'parsed_df_{idx}.csv'), index=False)
+            os.path.join(LOG_DIR, f'parsed_df_{idx}.csv'), index=False)
         print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
         print()
     print('All OK')
 
     print('Testing load_filings_fr:::')
     f_df = load_filings_fr(
-        os.path.join(DATA_ROOT, f'02_ind_cf/nse_fr_filings/CF_FR_*.csv'))
+        os.path.join(os.getenv('DATA_ROOT'), f'01_fin_data/02_ind_cf/nse_fr_filings/CF_FR_*.csv'))
     print(f_df.columns)
     print(f_df['fileName'].unique())

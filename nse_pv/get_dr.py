@@ -10,12 +10,11 @@ import sys
 import requests
 from pathlib import Path
 from calendar import monthrange, month_abbr
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pygeneric.archiver import Archiver
 import pygeneric.http_utils as http_utils
-from settings import DATA_ROOT, NSE_ARCHIVES_URL
 
-OUTPUT_DIR = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
+NSE_ARCHIVES_URL = 'https://archives.nseindia.com'
+OUTPUT_DIR = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_files(sub_url, filenames, archive_full_path):

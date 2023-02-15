@@ -11,14 +11,11 @@ import os
 import glob
 import datetime
 import pandas as pd
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygeneric.archiver as pyg_archiver
 import pygeneric.misc as pyg_misc
 import base_utils
-from settings import DATA_ROOT
 
-SUB_PATH1 = '02_ind_cf'
-CONFIG_SYM = '02_nse_symbols'
+PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 def current_asn(xp):
@@ -37,12 +34,12 @@ if __name__ == '__main__':
     exchange = 'nse' if len(sys.argv) != 3 else sys.argv[2]
 
     fr_filings_df = base_utils.load_filings_fr(
-        os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_filings/CF_FR_*.csv'))
+        os.path.join(PATH_1, f'{exchange}_fr_filings/CF_FR_*.csv'))
     fr_filings_df['filingDate'] = pd.to_datetime(fr_filings_df['filingDate'])
     fr_filings_df.sort_values(by='filingDate')
     fr_filings_df.reset_index(drop=True, inplace=True)
 
-    ARCHIVE_FOLDER = os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_xbrl_archive')
+    ARCHIVE_FOLDER = os.path.join(PATH_1, f'{exchange}_fr_xbrl_archive')
     METADATA_FILENAME = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
 
     ''' Important:

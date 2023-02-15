@@ -9,17 +9,16 @@ import sys
 import os
 import traceback
 import pandas as pd
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utils
 import pygeneric.misc as pyg_misc
-from settings import DATA_ROOT, LOG_DIR
 
-SUB_PATH1 = '02_ind_cf'
+DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_fin_data/02_ind_cf')
+LOG_DIR   = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     exchange = 'nse'
-    ARCHIVE_FOLDER = os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_xbrl_archive')
+    ARCHIVE_FOLDER = os.path.join(DATA_PATH, f'{exchange}_fr_xbrl_archive')
     METADATA_FILENAME = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
 
     metadata_df = pd.read_csv(METADATA_FILENAME)
@@ -27,7 +26,7 @@ if __name__ == '__main__':
     print('metadata_df: %d errors' % metadata_df.shape[0])
 
     fr_filings_df = base_utils.load_filings_fr(
-        os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_filings/CF_FR_*.csv'))
+        os.path.join(DATA_PATH, f'{exchange}_fr_filings/CF_FR_*.csv'))
 
     print('Re-checking errors ...')
     successes, errors = [], []
@@ -64,10 +63,10 @@ if __name__ == '__main__':
 
     if len(successes) > 0:
         successes = pd.DataFrame(successes)
-        successes.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'successes.csv'), index=False)
+        successes.to_csv(os.path.join(LOG_DIR, 'successes.csv'), index=False)
         print('  %d successful, stored in successes.csv' % successes.shape[0])
 
     if len(errors) > 0:
         errors = pd.DataFrame(errors)
-        errors.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'errors.csv'), index=False)
+        errors.to_csv(os.path.join(LOG_DIR, 'errors.csv'), index=False)
         print('  %d failed, stored in errors.csv' % errors.shape[0])

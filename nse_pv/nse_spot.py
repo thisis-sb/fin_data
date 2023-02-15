@@ -9,21 +9,21 @@ import glob
 import pandas as pd
 from datetime import datetime, timedelta
 from nsetools import Nse
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import common.nse_cf_ca
-import common.nse_symbols
+import fin_data.common.nse_cf_ca as nse_cf_ca
+import fin_data.common.nse_symbols as nse_symbols
 import pygeneric.datetime_utils as datetime_utils
 import pygeneric.http_utils as http_utils
-from settings import DATA_ROOT, CONFIG_DIR, LOG_DIR
 
-SUB_PATH1 = '01_nse_pv'
+DR_DATA_PATH  = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
+API_DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
+LOG_DIR       = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv')
 
 ''' --------------------------------------------------------------------------------------- '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
         data_file = 'cm_bhavcopy_all.csv.parquet'
 
-        data_files = glob.glob(os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed', f'**/{data_file}'))
+        data_files = glob.glob(os.path.join(DR_DATA_PATH, f'processed/**/{data_file}'))
         self.pv_data = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data['Date'] = pd.to_datetime(self.pv_data['Date'], format="%Y-%m-%d")
 
@@ -62,7 +62,7 @@ class NseSpotPVData:
             return df_row
 
         df_raw['idx'] = df_raw.index
-        symbol_cfca = common.nse_cf_ca.get_corporate_actions(symbol)
+        symbol_cfca = nse_cf_ca.get_corporate_actions(symbol)
         for idx, cfca_row in symbol_cfca.iterrows():
             date_idx = df_raw.index[df_raw['Date'] == cfca_row['Ex Date']]
             if len(date_idx) != 0:
@@ -99,7 +99,7 @@ class NseSpotPVData:
         return df
 
     def get_pv_data_api(self, symbol, after=None, from_to=None, n_days=0):
-        csv_files = glob.glob(os.path.join(DATA_ROOT, '01_nse_pv/01_api', f'{symbol}/*.csv'))
+        csv_files = glob.glob(os.path.join(API_DATA_PATH, f'{symbol}/*.csv'))
         if len(csv_files) == 0:
             return pd.DataFrame()
         df = pd.concat([pd.read_csv(f) for f in csv_files], axis=0)
@@ -179,9 +179,9 @@ class NseSpotPVData:
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_index_pv(symbol, from_to=None):
-    md_idx = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_indices')
-    data_files = glob.glob(
-        os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed/**/index_bhavcopy_all.csv.parquet'))
+    md_idx = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
+                                        '00_manual/00_meta_data.xlsx'), sheet_name='nse_indices')
+    data_files = glob.glob(os.path.join(DR_DATA_PATH, 'processed/**/index_bhavcopy_all.csv.parquet'))
     df = pd.concat([pd.read_parquet(f) for f in data_files])
     df = pd.merge(df, md_idx, on='Index Name', how='left')
 
@@ -198,9 +198,10 @@ def get_index_pv(symbol, from_to=None):
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_etf_pv(symbol=None, underlying=None, from_to=None):  # later on, series ETF/IDX/EQ
-    md_etf = pd.read_excel(os.path.join(CONFIG_DIR, '00_meta_data.xlsx'), sheet_name='nse_etf')
+    md_etf = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
+                                        '00_manual/00_meta_data.xlsx'), sheet_name='nse_etf')
     data_files = glob.glob(
-        os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed/**/etf_bhavcopy_all.csv.parquet'))
+        os.path.join(DR_DATA_PATH, 'processed/**/etf_bhavcopy_all.csv.parquet'))
     df = pd.concat([pd.read_parquet(f) for f in data_files])
     df = pd.merge(df, md_etf, on=['Symbol', 'SECURITY', 'UNDERLYING'], how='left')
     # print(df.columns)
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
     print(f'\nTesting basic nse_spot ...\n')
     symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC',
-               'JUBLFOOD', 'TATASTEEL']
+               'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
     symbols_other = ['ZYDUSLIFE']
 
     nse_pvdata = NseSpotPVData(verbose=False)
@@ -271,7 +272,7 @@ if __name__ == '__main__':
     def diagnostic(x1, x2, c1, c2):
         x = pd.DataFrame({'Date1':x1['Date'], 'Date2':x2['Date'], c1:x1[c1], c2:x2[c2]})
         x.reset_index(drop=True, inplace=True)
-        x.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'df_diagnostic.csv'), index=False)
+        x.to_csv(os.path.join(LOG_DIR, 'df_diagnostic.csv'), index=False)
         return f'{c1}/{c2} {x.loc[x[c1] != x[c2]].shape[0]} rows mismatch'
 
     def check_data(symbol_list, dates):
@@ -280,8 +281,8 @@ if __name__ == '__main__':
             print(f'  {symbol} ...', end=' ')
             df1 = nse_pvdata.get_pv_data(symbol, series='EQ', from_to=dates)
             df2 = nse_pvdata.get_pv_data_api(symbol, from_to=dates)
-            df1.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'nse_spot_df1.csv'), index=False)
-            df2.to_csv(os.path.join(LOG_DIR, SUB_PATH1, 'nse_spot_df2.csv'), index=False)
+            df1.to_csv(os.path.join(LOG_DIR, 'nse_spot_df1.csv'), index=False)
+            df2.to_csv(os.path.join(LOG_DIR, 'nse_spot_df2.csv'), index=False)
             assert df1.shape[0] == df2.shape[0], "%d / %d" % (df1.shape[0], df2.shape[0])
             assert np.where(df1['Open'] != df2['Open'])[0].shape[0] == 0
             assert np.where(df1['High'] != df2['High'])[0].shape[0] == 0

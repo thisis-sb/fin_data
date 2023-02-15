@@ -9,19 +9,20 @@ import os
 import sys
 import pandas as pd
 import traceback
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utils
 import pygeneric.archiver as pyg_archiver
 import pygeneric.datetime_utils as pyg_dt_utils
-from settings import DATA_ROOT
+# from settings import DATA_ROOT
 
-SUB_PATH1 = '02_ind_cf'
+# SUB_PATH1 = '02_ind_cf'
+PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     n_to_download = 5000 if len(sys.argv) != 2 else int(sys.argv[1])
     exchange = 'nse'
-    ARCHIVE_FOLDER = os.path.join(DATA_ROOT, SUB_PATH1, f'{exchange}_fr_xbrl_archive')
+    ARCHIVE_FOLDER = os.path.join(PATH_1, f'{exchange}_fr_xbrl_archive')
     METADATA_S1 = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
     METADATA_S2 = (os.path.join(ARCHIVE_FOLDER, 'metadata_S2.csv'),
                    os.path.join(ARCHIVE_FOLDER, 'metadata_S2_errors.csv'))

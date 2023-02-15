@@ -10,10 +10,8 @@ import sys
 import pandas as pd
 import nsepy
 from time import sleep
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from settings import DATA_ROOT
 
-OUTPUT_DIR     = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
+OUTPUT_DIR     = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
 
 ''' --------------------------------------------------------------------------------------- '''
 def fetch_year_data(symbol, symbol_type, year, verbose=False):

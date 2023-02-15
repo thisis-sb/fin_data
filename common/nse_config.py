@@ -1,19 +1,76 @@
 """
 Get all NSE config files (symbols, indices, et al)
-Usage: 1 or 2-year
+Usage: None or a list of years
 """
 ''' --------------------------------------------------------------------------------------- '''
 
 import os
 import sys
 import pandas as pd
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import pygeneric.http_utils as html_utils
-from settings import CONFIG_DIR
+from datetime import date
+import pygeneric.http_utils as pyg_http_utils
+
+PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '01_nse_symbols')
+PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
+PATH_3 = os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca')
 
 ''' --------------------------------------------------------------------------------------- '''
+def symbols_and_broad_indices():
+    clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
+                  'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
+                  'ETF Name', 'Sr.No.', 'Instrument Type']
+    nse_config_dicts = [
+        {
+            'urls': ['https://archives.nseindia.com/content/equities/EQUITY_L.csv'
+                     ],
+            'column_map': {'SYMBOL': clean_cols[0], ' ISIN NUMBER': clean_cols[1],
+                           ' SERIES': clean_cols[2], 'NAME OF COMPANY': clean_cols[3],
+                           ' PAID UP VALUE': clean_cols[5], ' FACE VALUE': clean_cols[4],
+                           ' MARKET LOT': clean_cols[6], ' DATE OF LISTING': clean_cols[7]
+                           },
+            'storage_path': PATH_1
+        },
+        {
+            'urls': [
+                'https://archives.nseindia.com/content/equities/List_of_Active_Securities_CM_DEBT.csv'
+                ],
+            'column_map': {'Sr.No.': clean_cols[11], 'ISIN': clean_cols[1],
+                           'NAME OF COMPANY': clean_cols[3], 'Instrument Type': clean_cols[12]
+                           },
+            'storage_path': PATH_1
+        },
+        {
+            'urls': ['https://archives.nseindia.com/content/indices/ind_nifty50list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_niftynext50list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_nifty100list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_nifty200list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_nifty500list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv',
+                     'https://archives.nseindia.com/content/indices/ind_niftytotalmarket_list.csv'
+                     ],
+            'column_map': {'Symbol': clean_cols[0], 'ISIN Code': clean_cols[1],
+                           'Series': clean_cols[2], 'Company Name': clean_cols[3],
+                           'Industry': clean_cols[8]
+                           },
+            'storage_path': PATH_2
+        }
+    ]
+
+    for ix in nse_config_dicts:
+        for url in ix['urls']:
+            print('Downloading', os.path.basename(url), end=' ... ')
+            df = pd.read_csv(url)
+            df.rename(columns=ix['column_map'], inplace=True)
+            df = df[list(ix['column_map'].values())]
+            df.to_csv(os.path.join(ix['storage_path'], '%s' % os.path.basename(url)), index=False)
+            print('Done, shape:', df.shape)
+
+    return
+
 def sectoral_indices():
-    import pygeneric.http_utils as pyg_http_utils
+    print('Downloading sectoral indices ...', end=' ')
     indices = [
         'NIFTY BANK',
         'NIFTY AUTO',
@@ -35,7 +92,7 @@ def sectoral_indices():
     for index_name in indices:
         url = 'https://www.nseindia.com/api/equity-stockIndices' + \
               '?index=%s' % index_name.replace(' ', '%20').replace('&', '%26')
-        data, _ = http_obj.http_get(url)
+        data = http_obj.http_get_json(url)
         df = []
         for x in data['data']:
             if x['priority'] == 0 and x['symbol'] == x['meta']['symbol']:
@@ -47,65 +104,15 @@ def sectoral_indices():
                                'meta'].keys() else None
                            })
         df = pd.DataFrame(df)
-        df.to_csv(CONFIG_DIR + '/01_nse_symbols/sectoral_ind_%s.csv'
-                  % index_name.replace(' ', '_'), index=False)
-
+        df.to_csv(os.path.join(PATH_2, 'sect_ind_%s.csv' % index_name.replace(' ', '_')), index=False)
+    print('Done')
     return
 
-def get_config(opt=None):
-    # 1. NSE symbols & indices
+def get_etf_list():
+    print('Downloading eq_etfseclist.csv', end=' ... ')
     clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
                   'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
                   'ETF Name', 'Sr.No.', 'Instrument Type']
-    nse_config_dicts = [
-        {'urls': ['https://archives.nseindia.com/content/equities/EQUITY_L.csv'
-                  ],
-         'column_map': {'SYMBOL': clean_cols[0], ' ISIN NUMBER': clean_cols[1],
-                        ' SERIES': clean_cols[2], 'NAME OF COMPANY': clean_cols[3],
-                        ' PAID UP VALUE': clean_cols[5], ' FACE VALUE': clean_cols[4],
-                        ' MARKET LOT': clean_cols[6], ' DATE OF LISTING': clean_cols[7]
-                        }
-         },
-        {'urls': [
-            'https://archives.nseindia.com/content/equities/List_of_Active_Securities_CM_DEBT.csv'
-            ],
-         'column_map': {'Sr.No.': clean_cols[11], 'ISIN': clean_cols[1],
-                        'NAME OF COMPANY': clean_cols[3], 'Instrument Type': clean_cols[12]
-                        }
-         },
-        {'urls': ['https://archives.nseindia.com/content/indices/ind_nifty50list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftynext50list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_nifty100list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_nifty200list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftymidcap150list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftysmallcap250list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_nifty500list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftymicrocap250_list.csv',
-                  'https://archives.nseindia.com/content/indices/ind_niftytotalmarket_list.csv'
-                  ],
-         'column_map': {'Symbol': clean_cols[0], 'ISIN Code': clean_cols[1],
-                        'Series': clean_cols[2], 'Company Name': clean_cols[3],
-                        'Industry': clean_cols[8]
-                        }
-         }
-    ]
-
-    for ix in nse_config_dicts:
-        for url in ix['urls']:
-            print('Downloading', os.path.basename(url), end=' ... ')
-            df = pd.read_csv(url)
-            df.rename(columns=ix['column_map'], inplace=True)
-            df = df[list(ix['column_map'].values())]
-            df.to_csv(CONFIG_DIR + '/01_nse_symbols/%s' % os.path.basename(url), index=False)
-            print('Done, shape:', df.shape)
-
-    ''' sectoral indices '''
-    print('Downloading sectoral indices ...', end=' ')
-    sectoral_indices()
-    print('Done')
-
-    # 2. NSE ETF list
-    print('Downloading eq_etfseclist.csv', end=' ... ')
     url = 'https://archives.nseindia.com/content/equities/eq_etfseclist.csv'
     cols_map = {'Symbol': clean_cols[0], 'ISIN Number': clean_cols[1],
                 'Underlying': clean_cols[9], 'Security Name': clean_cols[10],
@@ -116,11 +123,15 @@ def get_config(opt=None):
     df = pd.read_csv(url, encoding='cp1252')
     df.rename(columns=cols_map, inplace=True)
     df = df[list(cols_map.values())]
-    df.to_csv(CONFIG_DIR + '/01_nse_symbols/%s' % os.path.basename(url), index=False)
+    df.to_csv(os.path.join(PATH_1, os.path.basename(url)), index=False)
     print('Done, shape:', df.shape)
+    return
 
-    # 3. NSE symbol changes
+def get_symbol_changes():
     print('Downloading symbolchange.csv', end=' ... ')
+    clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
+                  'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
+                  'ETF Name', 'Sr.No.', 'Instrument Type']
     url = 'https://archives.nseindia.com/content/equities/symbolchange.csv'
     cols_map = {'Symbol': clean_cols[0], 'ISIN Number': clean_cols[1],
                 'Underlying': clean_cols[9], 'Security Name': clean_cols[10],
@@ -129,9 +140,12 @@ def get_config(opt=None):
                 }
     df = pd.read_csv(url, encoding='cp1252', header=None,
                      names=[clean_cols[3], 'Old Symbol', 'New Symbol', 'Date of Change'])
-    df.to_csv(CONFIG_DIR + '/01_nse_symbols/%s' % os.path.basename(url), index=False)
+    df.to_csv(os.path.join(PATH_1, os.path.basename(url)), index=False)
     print('Done, shape:', df.shape)
+    return
 
+def get_misc():
+    print('get_misc: Nothing for now, but later')
     # 4. FO market lots - postpone for now. Needed for FO?
     """print('Downloading fo_mktlots.csv', end=' ... ')
     nse_symbol_changes_url = 'https://archives.nseindia.com/content/fo/fo_mktlots.csv'
@@ -139,24 +153,21 @@ def get_config(opt=None):
     df.to_csv(CONFIG_DIR + '/01_nse_symbols/fo_mktlots.csv', index=False)
     print('Done, shape:', df.shape)"""
 
-    # 5. ------- TO DO: BSE_CODES -------
-    # -----------------------------------
-
-    # 6. Prepare list of symbol & index membership
+def prepare_symbols_master():
     print('Preparing symbols_master.csv', end=' ... ')
-    equity_l_df = pd.read_csv(os.path.join(CONFIG_DIR, '01_nse_symbols/EQUITY_L.csv'))
+    equity_l_df = pd.read_csv(os.path.join(PATH_1, 'EQUITY_L.csv'))
     equity_l_df.rename(columns=lambda x: x.strip(), inplace=True)
     equity_l_df = equity_l_df[['Symbol', 'Company Name', 'Series', 'ISIN']]
 
     indices = {'NIFTY 50': 'ind_nifty50list',
-               'NIFTY 100': 'ind_nifty100list',
+               'NEXT 50': 'ind_niftynext50list',
                'MIDCAP 150': 'ind_niftymidcap150list',
                'SMALLCAP 250': 'ind_niftysmallcap250list',
                'MICROCAP 250': 'ind_niftymicrocap250_list'
                }
     indices_master = pd.DataFrame()
     for index_name in list(indices.keys()):
-        df = pd.read_csv(os.path.join(CONFIG_DIR, f'01_nse_symbols/{indices[index_name]}.csv'))
+        df = pd.read_csv(os.path.join(PATH_2, f'{indices[index_name]}.csv'))
         df['nse_index_name'] = index_name
         if indices_master.shape[0] > 0:
             df = df[~df['ISIN'].isin(indices_master['ISIN'])]
@@ -165,25 +176,24 @@ def get_config(opt=None):
 
     indices_master.drop(columns=['Company Name'], inplace=True)
     df = pd.merge(equity_l_df, indices_master, on=['Symbol', 'ISIN', 'Series'], how='left')
-    df.to_csv(os.path.join(CONFIG_DIR, '01_nse_symbols/symbols_master.csv'), index=False)
+    df.to_csv(os.path.join(PATH_1, 'symbols_master.csv'), index=False)
     print('Done, shape:', df.shape)
-    return
 
-def get_cf_ca(opt):
-    year = opt.split('-')[1]
-    from datetime import datetime
-    date_now = datetime.now()
-    assert int(year) <= date_now.year, 'Invalid Year %s' % year
-    if int(year) == date_now.year:
-        from_to = ['01-01-%d' % int(year),'%s-%s-%d' % (('%d' % date_now.day).zfill(2),
-                                                        ('%d' % date_now.month).zfill(2),
+def get_cf_ca(year):
+    date_today = date.today()
+    assert int(year) <= date_today.year, 'Invalid Year %s' % year
+    if int(year) == date_today.year:
+        from_to = ['01-01-%d' % int(year),'%s-%s-%d' % (('%d' % date_today.day).zfill(2),
+                                                        ('%d' % date_today.month).zfill(2),
                                                         int(year))]
     else:
         from_to = ['01-01-%d' % int(year), '31-12-%d' % int(year)]
     url = 'https://www.nseindia.com/api/corporates-corporateActions?index=equities' + \
         '&from_date=%s&to_date=%s' % (from_to[0], from_to[1])
+
     print('Downloading %s ...' % from_to, end='')
-    cf_ca_json = html_utils.http_get(url)
+    http_obj = pyg_http_utils.HttpDownloads()
+    cf_ca_json = http_obj.http_get_json(url)
     cf_ca_df = pd.DataFrame(cf_ca_json)
     cf_ca_df.reset_index(drop=True, inplace=True)
     cols = {
@@ -202,7 +212,7 @@ def get_cf_ca(opt):
     }
     cf_ca_df.rename(columns=cols, inplace=True)
     cf_ca_df = cf_ca_df[list(cols.values())]
-    cf_ca_df.to_csv(os.path.join(CONFIG_DIR, '02_nse_cf_ca/CF_CA_%s.csv' % year), index=False)
+    cf_ca_df.to_csv(os.path.join(PATH_3, 'CF_CA_%s.csv' % year), index=False)
     if len(cf_ca_json) != cf_ca_df.shape[0]:
         print('Warning! shapes are not matching. %d/%d' % (len(cf_ca_json), cf_ca_df.shape[0]))
     else:
@@ -211,14 +221,15 @@ def get_cf_ca(opt):
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    opt = '1' if len(sys.argv) == 1 else sys.argv[1]
-    opts = {
-        '1':get_config,
-        '2':get_cf_ca
-    }
+    years = None if len(sys.argv) == 1 else [int(y) for y in sys.argv[1:]]
 
-    print('\n---> opt =', opt, ':::')
-    opts[opt.split('-')[0]](opt)
-    print('---> Done :::')
-
-
+    if years is None:
+        symbols_and_broad_indices()
+        sectoral_indices()
+        get_etf_list()
+        get_symbol_changes()
+        get_misc()
+        prepare_symbols_master()
+    else:
+        for year in years:
+            get_cf_ca(year)
