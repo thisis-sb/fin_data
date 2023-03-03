@@ -1,10 +1,11 @@
 """
 Symbols for NSE indices & historic symbol changes
 """
-
 ''' --------------------------------------------------------------------------------------- '''
+
 import os
 import sys
+import glob
 import pandas as pd
 
 CONFIG_ROOT = os.getenv('CONFIG_ROOT')
@@ -42,6 +43,22 @@ def get_isin(symbol):
     assert df.shape[0] == 1
     return df['ISIN'].values[0]
 
+def index_filename(code=0):
+    indices = {1: 'ind_nifty50list',
+               2: 'ind_niftynext50list',
+               3: 'ind_niftymidcap150list',
+               4: 'ind_niftysmallcap250list',
+               5: 'ind_niftymicrocap250_list',
+               6: 'ind_nifty100list',
+               7: 'ind_nifty200list',
+               8: 'ind_nifty500list',
+               9: 'ind_niftytotalmarket_list'}
+    for idx, f in enumerate(glob.glob(os.path.join(PATH_2, '*.csv'))):
+        ff = os.path.basename(f).split('.')[0]
+        if ff not in indices.values():
+            indices[list(indices.keys())[-1] + 1] = os.path.basename(f).split('.')[0]
+    return indices if code == 0 else indices[code]
+
 # ----------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     print('Testing nse_config ... ', end='')
@@ -61,3 +78,10 @@ if __name__ == '__main__':
 
     assert get_isin('ZYDUSLIFE') == 'INE010B01027'
     print('All OK')
+
+    idxs = index_filename(0)
+    print('\nAll indices with codes:')
+    print('\n'.join(['%2s    %s' % (c, idxs[c]) for c in idxs.keys()]))
+
+    assert (index_filename(1) == 'ind_nifty50list') and\
+           (index_filename(15) == 'sect_ind_NIFTY_HEALTHCARE_INDEX')

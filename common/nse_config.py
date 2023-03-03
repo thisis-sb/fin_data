@@ -219,6 +219,15 @@ def get_cf_ca(year):
         print('Done. cf_ca_df.shape:', cf_ca_df.shape)
     return
 
+def last_n_pe_dates(n):
+    today_str = date.today().strftime('%Y-%m-%d')
+    pe_dates = []
+    for yr in range(2018, date.today().year + 1):
+        for dt in ['%d-03-31' % yr, '%d-06-30' % yr, '%d-09-30' % yr, '%d-12-31' % yr]:
+            if dt <= today_str:
+                pe_dates.append(dt)
+    return pe_dates[-n:]
+
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     years = None if len(sys.argv) == 1 else [int(y) for y in sys.argv[1:]]
@@ -233,3 +242,5 @@ if __name__ == '__main__':
     else:
         for year in years:
             get_cf_ca(year)
+
+    print('Last 6 pe_dates:', last_n_pe_dates(6))
