@@ -1,72 +1,48 @@
 """
 Analyze CF errors
-    1. Re-check download_fr errors and attempt to download them again
-    x. More later
 """
 ''' --------------------------------------------------------------------------------------- '''
 
 import sys
 import os
+import glob
 import traceback
 import pandas as pd
-import base_utils
+from base_utils import prepare_json_key
 import pygeneric.misc as pyg_misc
 
-DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_fin_data/02_ind_cf')
-LOG_DIR   = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
+PATH_1  = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/01_nse_fr_filings')
+PATH_2  = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/02_nse_fr_archive')
+LOG_DIR = LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    exchange = 'nse'
-    ARCHIVE_FOLDER = os.path.join(DATA_PATH, f'{exchange}_fr_xbrl_archive')
-    METADATA_FILENAME = os.path.join(ARCHIVE_FOLDER, 'metadata_S1.csv')
+    fr_filings = pd.concat(pd.read_csv(f) for f in glob.glob(os.path.join(PATH_1, 'CF_FR_2*.csv')))
+    fr_filings = fr_filings.sort_values(by='toDate').reset_index(drop=True)
+    fr_filings['toDate'] = pd.to_datetime(fr_filings['toDate'])
+    fr_filings['key'] = fr_filings.apply(lambda x: prepare_json_key(x), axis=1)
+    print('Loaded fr_filings, shape:', fr_filings.shape)
 
-    metadata_df = pd.read_csv(METADATA_FILENAME)
-    metadata_df = metadata_df.loc[~metadata_df['outcome']].reset_index(drop=True)
-    print('metadata_df: %d errors' % metadata_df.shape[0])
+    metadata = pd.concat(pd.read_csv(f) for f in glob.glob(os.path.join(PATH_2, '**/metadata.csv')))
+    print('Loaded metadata, shape:', metadata.shape)
 
-    fr_filings_df = base_utils.load_filings_fr(
-        os.path.join(DATA_PATH, f'{exchange}_fr_filings/CF_FR_*.csv'))
+    print('check-1: json_keys:', set(fr_filings['key'].unique()) == set(metadata['key'].unique()))
+    print('check-2: xbrl:', set(fr_filings['xbrl'].unique()) == set(metadata['xbrl'].unique()))
 
-    print('Re-checking errors ...')
-    successes, errors = [], []
-    for idx, row in metadata_df.iterrows():
-        print(pyg_misc.progress_str(idx + 1, metadata_df.shape[0]), end='')
-        sys.stdout.flush()
-        xbrl_url = row['xbrl']
+    def save_errors(df_x, filename):
+        if df_x.shape[0] > 0:
+            df_x.to_csv(filename, index=False)
+            print('Saved in', filename[len(os.getenv('HOME_DIR')) + 1:])
+        else:
+            if os.path.exists(filename):
+                os.remove(filename)
 
-        try:
-            xbrl_data = base_utils.get_xbrl(xbrl_url)
-            outcome, error_msg = True, ''
-        except Exception as e:
-            outcome, error_msg = False, 'ERROR! %s\n%s' % (e, traceback.format_exc())
-            xbrl_data = ''
+    df = metadata.loc[~metadata['outcome']]
+    print('check-3: %d json outcome errors.' % df.shape[0], end=' ')
+    save_errors(df, os.path.join(LOG_DIR, 'json_outcome_errors.csv'))
 
-        xbrl_filing_info = fr_filings_df.loc[fr_filings_df['xbrl'] == xbrl_url].reset_index(drop=True)
-        n_filing_entries = len(xbrl_filing_info['symbol'].unique())
-        if n_filing_entries > 1:
-            print('\nOOPS: %d entries in fr_filings_df for %s' % (n_filing_entries, xbrl_url))
-
-        res = {'xbrl': xbrl_url,
-               'size': len(xbrl_data),
-               'outcome': outcome,
-               'symbol':xbrl_filing_info['symbol'].values[0],
-               'companyName': xbrl_filing_info['companyName'].values[0],
-               'financialYear': xbrl_filing_info['financialYear'].values[0],
-               'period': xbrl_filing_info['period'].values[0],
-               'relatingTo': xbrl_filing_info['relatingTo'].values[0],
-               'filingDate':xbrl_filing_info['filingDate'].values[0],
-               'error_msg': error_msg
-               }
-        successes.append(res) if outcome is True else errors.append(res)
-    print('\nDone')
-
-    if len(successes) > 0:
-        successes = pd.DataFrame(successes)
-        successes.to_csv(os.path.join(LOG_DIR, 'successes.csv'), index=False)
-        print('  %d successful, stored in successes.csv' % successes.shape[0])
-
-    if len(errors) > 0:
-        errors = pd.DataFrame(errors)
-        errors.to_csv(os.path.join(LOG_DIR, 'errors.csv'), index=False)
-        print('  %d failed, stored in errors.csv' % errors.shape[0])
+    df = metadata.loc[~metadata['xbrl_outcome']]
+    print('check-4: %d xbrl outcome errors (ex -).' % df.shape[0], end=' ')
+    save_errors(df, os.path.join(LOG_DIR, 'xbrl_outcome_errors.csv'))
+    print('%d unique xbrl links (across %d symbols) have errors'
+          % (len(df['xbrl'].unique()), len(df['symbol'].unique())))

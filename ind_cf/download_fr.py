@@ -12,6 +12,7 @@ import pandas as pd
 import pygeneric.misc as pyg_misc
 import pygeneric.http_utils as pyg_http_utils
 import pygeneric.archiver as pyg_archiver
+from base_utils import prepare_json_key
 
 PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/01_nse_fr_filings')
 PATH_2 = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/02_nse_fr_archive')
@@ -42,14 +43,14 @@ class Manager:
             df = pd.read_csv(self.metadata_filename)
             df['filingDate'] = pd.to_datetime(df['filingDate'])
             self.json_metadata_dict = dict(zip(df['key'], df.to_dict('records')))
-            fr_filings['key'] = fr_filings.apply(lambda x: self.prepare_json_key(x), axis=1)
+            fr_filings['key'] = fr_filings.apply(lambda x: prepare_json_key(x), axis=1)
             self.to_download = fr_filings.loc[~fr_filings['key'].isin(df['key'].unique())]. \
                 reset_index(drop=True)
             for idx, r in df.iterrows():
-                self.downloaded_xbrl_links[r['xbrl']] = {'xbrl_valid': r['xbrl_valid'],
+                self.downloaded_xbrl_links[r['xbrl']] = {'xbrl_outcome': r['xbrl_outcome'],
                                                          'xbrl_size': r['xbrl_size'],
-                                                         'xbrl_archive_sub_path':
-                                                             r['xbrl_archive_sub_path'],
+                                                         'xbrl_archive_path':
+                                                             r['xbrl_archive_path'],
                                                          'xbrl_error': r['xbrl_error']
                                                          }
         else:
@@ -58,22 +59,21 @@ class Manager:
             self.downloaded_xbrl_links = {}
 
         if self.to_download.shape[0] == 0:
-            print('Nothing to download')
+            print('Nothing to download. metadata.shape:', pd.read_csv(self.metadata_filename).shape)
             return
 
-        ''' self.current_xbrl_archive = None '''
         xbrl_archive_files = sorted(glob.glob(os.path.join(PATH_2, '%d/xbrl_archive_*' % self.year)))
         if len(xbrl_archive_files) == 0:
             print('No xbrl archives found.', end=' ')
-            self.current_xbrl_archive_sub_path = '%d/xbrl_archive_001' % self.year
+            self.current_xbrl_archive_path = '%d/xbrl_archive_001' % self.year
             update = False
         else:
-            self.current_xbrl_archive_sub_path = '%d/%s' % (self.year,
-                                                            xbrl_archive_files[-1].split('\\')[-1])
+            self.current_xbrl_archive_path = '%d/%s' % (self.year,
+                                                        xbrl_archive_files[-1].split('\\')[-1])
             update = True
-        print('current_xbrl_archive_sub_path:', self.current_xbrl_archive_sub_path)
+        print('current_xbrl_archive_path:', self.current_xbrl_archive_path)
         self.current_xbrl_archive = pyg_archiver.Archiver(
-            os.path.join(PATH_2, self.current_xbrl_archive_sub_path), mode='w', update=update)
+            os.path.join(PATH_2, self.current_xbrl_archive_path), mode='w', update=update)
 
         print('DownloadManager initialized. To download: %d' % self.to_download.shape[0])
         self.http_obj = pyg_http_utils.HttpDownloads(max_tries=10, timeout=10)
@@ -82,7 +82,7 @@ class Manager:
 
         for idx in self.to_download.index:
             pyg_misc.print_progress_str(idx + 1, self.to_download.shape[0])
-            if idx % 50 == 0:
+            if idx % self.json_checkpoint_step == 0:
                 print(' --> n_downloaded/session_errors: %d/%d'
                       % (n_downloaded, self.session_errors))
             if self.download_json(idx):
@@ -100,7 +100,7 @@ class Manager:
 
     def download_json(self, fr_idx):
         row = self.to_download.loc[fr_idx].to_dict()
-        key = self.prepare_json_key(row)
+        key = prepare_json_key(row)
         if key in list(self.json_metadata_dict.keys()):
             return False
 
@@ -122,14 +122,14 @@ class Manager:
             json_data, resultFormat, raw_data = '', '', ''
             self.session_errors += 1
 
-        archive_sub_path = '%d/json_month_%s' % (self.year, ('%d' % filingMonth).zfill(2))
-        if archive_sub_path not in self.json_archives.keys():
-            archive_path = os.path.join(PATH_2, archive_sub_path)
+        json_archive_path = '%d/json_month_%s' % (self.year, ('%d' % filingMonth).zfill(2))
+        if json_archive_path not in self.json_archives.keys():
+            archive_path = os.path.join(PATH_2, json_archive_path)
             update = os.path.exists(archive_path)
-            self.json_archives[archive_sub_path] = pyg_archiver.Archiver(archive_path, mode='w',
+            self.json_archives[json_archive_path] = pyg_archiver.Archiver(archive_path, mode='w',
                                                                          update=update)
         # should we check if the key exists - for earlier erroneous cases?
-        self.json_archives[archive_sub_path].add(key, raw_data)
+        self.json_archives[json_archive_path].add(key, raw_data)
 
         ''' check link & get data '''
         xbrl_meta_data = self.get_xbrl_data(row['xbrl'])
@@ -149,14 +149,14 @@ class Manager:
                                         'key': key,
                                         'outcome': outcome,
                                         'size': len(raw_data),
-                                        'archive_sub_path': archive_sub_path,
+                                        'json_archive_path': json_archive_path,
                                         'error_msg': error_msg,
                                         'trace_log': trace_log,
                                         'json_url': json_url,
                                         'xbrl': row['xbrl'],
-                                        'xbrl_valid':xbrl_meta_data['xbrl_valid'],
+                                        'xbrl_outcome':xbrl_meta_data['xbrl_outcome'],
                                         'xbrl_size': xbrl_meta_data['xbrl_size'],
-                                        'xbrl_archive_sub_path': xbrl_meta_data['xbrl_archive_sub_path'],
+                                        'xbrl_archive_path': xbrl_meta_data['xbrl_archive_path'],
                                         'xbrl_error': xbrl_meta_data['xbrl_error'],
                                         'run_timestamp': self.run_timestamp
                                         }
@@ -169,7 +169,7 @@ class Manager:
 
     def get_xbrl_data(self, xbrl_link):
         if os.path.basename(xbrl_link) == '-':
-            return {'xbrl_valid': False, 'xbrl_size': 0, 'xbrl_archive_sub_path': None,
+            return {'xbrl_outcome': False, 'xbrl_size': 0, 'xbrl_archive_path': None,
                     'xbrl_error': 'invalid xbrl ink: [%s]' % xbrl_link
                     }
 
@@ -180,27 +180,27 @@ class Manager:
         try:
             xbrl_data = self.http_obj.http_get(xbrl_link)
             if (self.current_xbrl_archive.data_size() + len(xbrl_data)) > self.xbrl_archive_data_size:
-                print('\n        %s size %d exceeding limit' % (self.current_xbrl_archive_sub_path,
+                print('\n        %s size %d exceeding limit' % (self.current_xbrl_archive_path,
                                                                 self.current_xbrl_archive.data_size()
                                                                 + len(xbrl_data)), end='. ')
                 self.current_xbrl_archive.flush(create_parent_dir=True)
-                new_xan = int(self.current_xbrl_archive_sub_path.split('_')[-1]) + 1
-                self.current_xbrl_archive_sub_path = '%d/xbrl_archive_%s'\
-                                                     % (self.year, ('%d' % new_xan).zfill(3))
+                new_xan = int(self.current_xbrl_archive_path.split('_')[-1]) + 1
+                self.current_xbrl_archive_path = '%d/xbrl_archive_%s'\
+                                                 % (self.year, ('%d' % new_xan).zfill(3))
                 self.current_xbrl_archive = pyg_archiver.Archiver(
-                    os.path.join(PATH_2, self.current_xbrl_archive_sub_path), mode='w')
-                print('new current_xbrl_archive:', self.current_xbrl_archive_sub_path)
+                    os.path.join(PATH_2, self.current_xbrl_archive_path), mode='w')
+                print('new current_xbrl_archive_path:', self.current_xbrl_archive_path)
             self.current_xbrl_archive.add(xbrl_link, xbrl_data)
-            self.downloaded_xbrl_links[xbrl_link] = {'xbrl_valid': True,
+            self.downloaded_xbrl_links[xbrl_link] = {'xbrl_outcome': True,
                                                      'xbrl_size': len(xbrl_data),
-                                                     'xbrl_archive_sub_path':
-                                                         self.current_xbrl_archive_sub_path,
+                                                     'xbrl_archive_path':
+                                                         self.current_xbrl_archive_path,
                                                      'xbrl_error': ''
                                                      }
         except Exception as e:
-            self.downloaded_xbrl_links[xbrl_link] = {'xbrl_valid': False,
+            self.downloaded_xbrl_links[xbrl_link] = {'xbrl_outcome': False,
                                                      'xbrl_size': 0,
-                                                     'xbrl_archive_sub_path': None,
+                                                     'xbrl_archive_path': None,
                                                      'xbrl_error': '%s\%s' % (e, traceback.format_exc())
                                                      }
         return self.downloaded_xbrl_links[xbrl_link]
@@ -213,28 +213,12 @@ class Manager:
 
         self.current_xbrl_archive.flush(create_parent_dir=True)
         self.current_xbrl_archive = pyg_archiver.Archiver(
-            os.path.join(PATH_2, self.current_xbrl_archive_sub_path), mode='w', update=True)
+            os.path.join(PATH_2, self.current_xbrl_archive_path), mode='w', update=True)
 
         df = pd.DataFrame(list(self.json_metadata_dict.values()))
         df.sort_values(by='filingDate', inplace=True)
         df.to_csv(self.metadata_filename, index=False)
         return True
-
-    def prepare_json_key(self, row_dict):
-        params = row_dict['params']
-        if '&' in row_dict['symbol']:
-            params = params.replace('&', '%26')
-        seqNumber = row_dict['seqNumber']
-        industry = row_dict['industry'] if pd.notna(row_dict['industry']) else ''
-        oldNewFlag = row_dict['oldNewFlag'] if pd.notna(row_dict['oldNewFlag']) else ''
-        reInd = row_dict['reInd']
-        format_x = row_dict['format']
-
-        key = 'params=%s&seq_id=%s' % (params, seqNumber) + \
-              '&industry=%s&frOldNewFlag=%s' % (industry, oldNewFlag) + \
-              '&ind=%s&format=%s' % (reInd, format_x)
-
-        return key
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':

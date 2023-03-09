@@ -1,7 +1,5 @@
 """
-Common utils for xbrl retrieval and processing
-TO DO
-    1. Don't repeat if entry in S2 already
+Base utils for CF downloads & processing
 """
 ''' --------------------------------------------------------------------------------------- '''
 import glob
@@ -16,34 +14,25 @@ import pygeneric.fin_utils as pyg_fin_utils
 LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
+def prepare_json_key(row):
+    params = row['params']
+    if '&' in row['symbol']:
+        params = params.replace('&', '%26')
+    seqNumber = row['seqNumber']
+    industry = row['industry'] if pd.notna(row['industry']) else ''
+    oldNewFlag = row['oldNewFlag'] if pd.notna(row['oldNewFlag']) else ''
+    reInd = row['reInd']
+    format_x = row['format']
+
+    return 'params=%s&seq_id=%s' % (params, seqNumber) + \
+           '&industry=%s&frOldNewFlag=%s' % (industry, oldNewFlag) + \
+           '&ind=%s&format=%s' % (reInd, format_x)
+
 def get_xbrl(url):
     response = requests.get(url, headers=pyg_html_utils.http_request_header())
     if response.status_code != 200:
         raise ValueError('get_xbrl: code = %d, link = [%s]' % (response.status_code, url))
     return response.content
-
-def load_filings_fr(path_regex):
-    fr_filings_files = glob.glob(path_regex)
-    print('\nbase_utils.load_filings_fr: Loading %d fr_filings files ... ' % len(fr_filings_files), end='')
-
-    def rf(f):
-        x = pd.read_csv(f)
-        x['fileName'] = os.path.basename(f)
-        return x
-
-    fr_filings_df = pd.concat([rf(f) for f in fr_filings_files])
-    print('Done. fr_filings_df.shape:', fr_filings_df.shape)
-
-    empty_fr_xbrl_df = fr_filings_df.loc[fr_filings_df['xbrl'].str.endswith('/-')]
-    empty_fr_xbrl_df.to_csv(os.path.join(LOG_DIR, 'empty_fr_xbrl_df.csv'), index=False)
-    fr_filings_df.drop(empty_fr_xbrl_df.index, inplace=True)
-    print('Dropped %d filings with empty fr xbrl links' % empty_fr_xbrl_df.shape[0])
-    print('Net fr_filings_df.shape:', fr_filings_df.shape)
-    fr_filings_df.reset_index(drop=True, inplace=True)
-
-    print('fr_filings_df: shape: %s, %d unique XBRLs\n'
-          % (fr_filings_df.shape, len(fr_filings_df['xbrl'].unique())))
-    return fr_filings_df
 
 def parse_xbrl_fr(xbrl_str):
     df = pd.DataFrame(columns=['tag', 'context'])
@@ -131,9 +120,3 @@ if __name__ == '__main__':
         print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
         print()
     print('All OK')
-
-    print('Testing load_filings_fr:::')
-    f_df = load_filings_fr(
-        os.path.join(os.getenv('DATA_ROOT'), f'01_fin_data/02_ind_cf/nse_fr_filings/CF_FR_*.csv'))
-    print(f_df.columns)
-    print(f_df['fileName'].unique())
