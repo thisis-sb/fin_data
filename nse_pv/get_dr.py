@@ -28,8 +28,11 @@ def get_files(sub_url, filenames, archive_full_path):
             total_size += len(r.content)
             archive.add(f, r.content)
             last_file = f
-    archive.flush()
-    print('%d files, %.1f KB, last: %s' % (n_downloaded, total_size/1e3, last_file))
+    if n_downloaded > 0:
+        archive.flush()
+        print('%d files, %.1f KB, last: %s' % (n_downloaded, total_size/1e3, last_file))
+    else:
+        print('No files downloaded')
 
 def nse_download_daily_reports(year_str, month_str):
     months_dict = {month.upper(): index for index, month in enumerate(month_abbr) if month}

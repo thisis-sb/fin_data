@@ -45,8 +45,14 @@ def process_index_reports(year, verbose=False):
         print(len(archive_files), 'archive files:')
         print(archive_files)
 
+    def read_index_file(bytes, index_file_name):
+        df_x = pd.read_csv(bytes)
+        dtstr = index_file_name.split('.')[0][14:]
+        df_x['Index Date'] = '%s-%s-%s' % (dtstr[4:], dtstr[2:4], dtstr[0:2])
+        return df_x
+
     archives = [Archiver(f, mode='r', compression='zip') for f in archive_files]
-    df = pd.concat([pd.read_csv(BytesIO(a.get(f))) for a in archives for f in a.keys()], axis=0)
+    df = pd.concat([read_index_file(BytesIO(a.get(f)), f) for a in archives for f in a.keys()], axis=0)
     df = df[[col for col in df.columns if 'Unnamed' not in col]]
     df['Prev Close'] = df['Closing Index Value'] - df['Points Change']
     df.rename(columns={'Index Date': 'Date',
@@ -54,8 +60,9 @@ def process_index_reports(year, verbose=False):
                        'Low Index Value': 'Low', 'Closing Index Value': 'Close'}, inplace=True)
     df = df[['Date', 'Index Name', 'Open', 'High', 'Low', 'Close',
              'Prev Close', 'Volume', 'Turnover (Rs. Cr.)', 'P/E', 'P/B', 'Div Yield']]
-    df['Date'] = pd.to_datetime(df['Date'], format='%d-%m-%Y')
-    df = df.sort_values(by='Date').reset_index(drop=True)
+    df['Date'] = pd.to_datetime(df['Date'])
+    df.sort_values(by=['Index Name', 'Date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
 
     df.to_parquet(os.path.join(PATH_2, f'{year}/index_bhavcopy_all.csv.parquet'),
                   index=False, engine='pyarrow', compression='gzip')
@@ -115,7 +122,7 @@ def process_etf_reports(year, verbose=False):
                        'PREVIOUS CLOSE PRICE': 'Prev Close',
                        'NET TRADED QTY': 'Volume'}, inplace=True)
     df['Date'] = pd.to_datetime(df['Date'])
-    df = df.sort_values(by='Date').reset_index(drop=True)
+    df = df.sort_values(by=['Symbol', 'Date']).reset_index(drop=True)
 
     df.insert(0, 'Date', df.pop('Date'))
     df.insert(1, 'Symbol', df.pop('Symbol'))
@@ -375,11 +382,7 @@ def get_52week_high_low(df):
     return
 """
 
-''' --------------------------------------------------------------------------------------- '''
-if __name__ == '__main__':
-    tst_syms = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'ZYDUSLIFE']
-    verbose = False
-    year = datetime.date.today().year if len(sys.argv) == 1 else int(sys.argv[1])
+def wrapper(year, verbose=False):
     print(f'\nProcessing daily reports for year {year}...')
     os.makedirs(os.path.join(PATH_2, f'{year}'), exist_ok=True)
 
@@ -407,3 +410,13 @@ if __name__ == '__main__':
     process_fao_bhavcopy(year, symbols=symbols, n_days=n_days, verbose=verbose)
     print('FAO processing ... Done')
     """
+
+    return
+
+''' --------------------------------------------------------------------------------------- '''
+if __name__ == '__main__':
+    tst_syms = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCTC', 'JUBLFOOD', 'ZYDUSLIFE']
+    verbose = False
+    year = datetime.date.today().year if len(sys.argv) == 1 else int(sys.argv[1])
+    wrapper(year, verbose=verbose)
+

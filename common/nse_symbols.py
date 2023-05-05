@@ -22,7 +22,7 @@ def get_symbols(file_list, series=None):
         symbols = pd.concat([symbols, df[['Series', 'Symbol']]])
     if series is not None:
         symbols = symbols.loc[symbols.Series == series].reset_index(drop=True)
-    return symbols['Symbol'].unique()
+    return list(symbols['Symbol'].unique())
 
 def get_symbol_changes(cutoff_date='2018-01-01'):
     df = pd.read_csv(os.path.join(PATH_1, f'symbolchange.csv'))

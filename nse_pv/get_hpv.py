@@ -1,99 +1,190 @@
 """
-Download NSE Historical Price-Volume & Price-Ratios
-Usage: [full | ytd] [csv | symbols]
+Download NSE Historical Price-Volume Data via direct http_get & apply corporate actions
+Usage: symbols
 """
 
 ''' --------------------------------------------------------------------------------------- '''
-import datetime
+
 import os
 import sys
+import datetime
+import glob
+import re
+import ast
 import pandas as pd
-import nsepy
 from time import sleep
+import pygeneric.http_utils as http_utils
 
 OUTPUT_DIR     = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
 
 ''' --------------------------------------------------------------------------------------- '''
-def fetch_year_data(symbol, symbol_type, year, verbose=False):
+def get_raw_hpv_for_year(symbol, year, verbose=False):
+    date_today = datetime.date.today()
+    output_filename = os.path.join(OUTPUT_DIR, f'{symbol}/raw', f'{year}.csv')
+
+    print('For %s for year %d -->' % (symbol, year))
+    if date_today.year != year and os.path.exists(output_filename):
+        print('  Data already downloaded')
+        return
+
+    from_date = datetime.date(year, 1, 1)
+    end_date = date_today if year == date_today.year else datetime.date(year, 12, 31)
+
+    results = []
+    while from_date <= end_date:
+        to_date = from_date + datetime.timedelta(100)
+        if to_date > end_date:
+            to_date = end_date
+        if from_date == to_date:
+            break
+        from_date_str = '%s-%s-%d' % (('%s' % from_date.day).zfill(2),
+                                      ('%s' % from_date.month).zfill(2),
+                                      year)
+        to_date_str = '%s-%s-%d' % (('%s' % to_date.day).zfill(2),
+                                    ('%s' % to_date.month).zfill(2),
+                                    year)
+        # print('-->', from_date_str, to_date_str)
+        url = 'https://www.nseindia.com/api/historical/securityArchives?' + \
+              'from=%s&to=%s&symbol=%s' % (from_date_str, to_date_str, symbol) + \
+              '&dataType=priceVolumeDeliverable&series=EQ'
+        get_dict = http_utils.http_get(url)
+
+        df = pd.DataFrame(get_dict['data'])
+        if df.shape[0] > 0:
+            results.append(df)
+            if verbose:
+                print('  Retrieved -->', df['CH_TIMESTAMP'].values[0], df['CH_TIMESTAMP'].values[-1])
+            from_date = datetime.datetime.strptime(
+                df['CH_TIMESTAMP'].values[-1], '%Y-%m-%d').date() + datetime.timedelta(1)
+        else:
+            from_date = from_date + datetime.timedelta(100)
+
+        if from_date > end_date:
+            break
+
+    if len(results) == 0:
+        print('  No data for year %d' % year)
+        return True
+
+    r_df = pd.concat([x for x in results]).drop_duplicates('CH_TIMESTAMP')
+    r_df = r_df.sort_values(by='CH_TIMESTAMP').reset_index(drop=True)
+    print('  Retrieved for year %d --> %d rows, from / to: %s / %s' %
+          (year, r_df.shape[0], r_df['CH_TIMESTAMP'].values[0], r_df['CH_TIMESTAMP'].values[-1]))
+
+
+    if not os.path.exists(os.path.dirname(output_filename)):
+        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+    r_df.to_csv(output_filename, index=False)
+
+    return True
+
+def get_raw_hpv_clean_raw(symbol, from_year, verbose=False):
+    [get_raw_hpv_for_year(symbol, y, verbose)
+     for y in range(from_year, datetime.date.today().year + 1)]
+
+    raw_files = glob.glob(os.path.join(OUTPUT_DIR, f'{symbol}/raw/*.csv'))
+    raw_data = pd.concat([pd.read_csv(f) for f in raw_files])
+
+    cols_dict = {'CH_TIMESTAMP':'Date', 'CH_SYMBOL':'Symbol', 'CH_SERIES':'Series',
+                 'CH_OPENING_PRICE':'Open', 'CH_TRADE_HIGH_PRICE':'High',
+                 'CH_TRADE_LOW_PRICE':'Low', 'CH_CLOSING_PRICE':'Close',
+                 'CH_PREVIOUS_CLS_PRICE':'Prev Close', 'CH_LAST_TRADED_PRICE':'Last', 'VWAP':'VWAP',
+                 'CH_52WEEK_HIGH_PRICE':'52_Wk_H', 'CH_52WEEK_LOW_PRICE':'52_Wk_L',
+                 'CH_TOT_TRADED_QTY':'Volume', 'CH_TOT_TRADED_VAL':'Traded Value',
+                 'CH_TOTAL_TRADES':'No Of Trades',
+                 'COP_DELIV_QTY':'Delivery Volume', 'COP_DELIV_PERC':'% Deliverble', 'CA':'CA'}
+
+    raw_data = raw_data[list(cols_dict.keys())]
+    raw_data = raw_data.rename(columns=cols_dict)
+    raw_data = raw_data.sort_values(by='Date').reset_index(drop=True)
+    return raw_data
+
+def process_ca(raw_pv, verbose=False):
+    xx = raw_pv[['Date', 'CA']].copy()
+    corp_actions = xx.dropna()
+    xx['mult'] = 1.0
+    # print(corp_actions)
     if verbose:
-        print(f'  {symbol} for year {year}', end=' ')
+        corp_actions.to_csv(os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv/corp_actions.csv'))
 
-    date_today_tokens = datetime.datetime.now().strftime('%Y-%m-%d').split('-')
-    start_date = datetime.date(year, 1, 1)
-    end_date   = datetime.date(year, 12, 31) if year < int(date_today_tokens[0]) else \
-        datetime.date(year, int(date_today_tokens[1]), int(date_today_tokens[2]))
+    for idx, row in corp_actions.iterrows():
+        to_index = idx
 
-    if symbol_type == 'IDX':
-        df = nsepy.get_history(symbol=symbol, start=start_date, end=end_date, index=True)
-    elif symbol_type == 'EQ':
-        df = nsepy.get_history(symbol=symbol, start=start_date, end=end_date)
-    else:
-        assert False, "ERROR: Unknown option, ... exiting with error"
-
-    if df.shape[0] > 0:
-        output_filename = os.path.join(OUTPUT_DIR, symbol, f'{symbol}-{year}.csv')
-        if not os.path.exists(os.path.dirname(output_filename)):
-            os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-        df.to_csv(output_filename)
         if verbose:
-            print(df.shape[0], 'rows.')
-    else:
-        if verbose:
-            print('no data.')
+            print('XXX -->', ast.literal_eval('%s' % row['CA'])[0]['subject'])
+        ca_subject = ast.literal_eval('%s' % row['CA'])[0]['subject'].strip()
 
-    last_date = None if df.shape[0] == 0 else df.index[-1]
-
-    return df.shape[0], last_date
-
-def fetch_symbol_data(symbol, symbol_type, download_type, verbose=False):
-    print(f'{symbol} ({symbol_type} {download_type}): ', end=''); sys.stdout.flush()
-    date_today_tokens = datetime.datetime.now().strftime('%Y-%m-%d').split('-')
-    n_rows = 0
-    years = range(2001, int(date_today_tokens[0]) + 1) if download_type == 'full' else \
-        [int(date_today_tokens[0])]
-
-    last_date = None
-    for year in years:
-        nr, last_date = fetch_year_data(symbol, symbol_type, year, verbose)
-        n_rows += nr
-
-    print(f'{n_rows} rows fetched, last_date = {last_date}')
-    return
-
-def download_all(symbols, download_type, verbose=False):
-    if len(symbols) == 1 and symbols[0][-4:] == '.csv':
-        csv_file = pd.read_csv(os.path.join(os.getenv('DATA_DIR'),
-                                            '00_config/fin_data_symbols', symbols[0]))
-        col_list = csv_file.columns.to_list()
-        if 'Group' in col_list:
-            symbol_list = list(csv_file['Symbol'] + '.' + csv_file['Group'])
+        if ca_subject[0:16] == 'Face Value Split':
+            tok = re.split('Rs | Re ', ca_subject)
+            try:
+                mult = float(tok[2].split('/-')[0]) / float(tok[1].split('/-')[0])
+            except:
+                assert False, 'ca_subject: %s' % ca_subject
+                # mult = float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+            if verbose:
+                print('mult:', mult)
+            xx.loc[xx.index < idx, 'mult'] = mult * xx.loc[xx.index < idx, 'mult']
+        elif ca_subject[0:5] == 'Bonus':
+            tok = ca_subject.split()[1].split(':')
+            mult = float(tok[1]) / (float(tok[0]) + float(tok[1]))
+            if verbose:
+                print('mult:', mult)
+            xx.loc[xx.index < idx, 'mult'] = mult * xx.loc[xx.index < idx, 'mult']
         else:
-            symbol_list = [sym + '.NSE EQ' for sym in csv_file['Symbol'].to_list()]
-    else:
-        symbol_list = symbols
+            if verbose:
+                print('Ignoring: %s / %s' % (row['Date'], ca_subject))
 
-    symbol_list = list(set(symbol_list))
-    symbol_list.sort()
+    xx['ca_chk'] = xx.mult.eq(xx.mult.shift())
+    if verbose:
+        print('process_ca mult xx df:')
+        print(xx.loc[~xx.ca_chk][1:])
+    return xx
 
-    for i, sym in enumerate(symbol_list):
-        if sym.endswith('.IDX'):
-            fetch_symbol_data(sym.split('.')[0], 'IDX', download_type, verbose)
-        else:
-            fetch_symbol_data(sym.split('.')[0], 'EQ', download_type, verbose)
-        if i < len(symbol_list)-1:
-            sleep(3)
+def get_pv_data(symbol, after=None, from_to=None, n_days=0):
+    API_DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
+    df = pd.read_csv(os.path.join(API_DATA_PATH, f'{symbol}/pv_data_adjusted.csv'))
+    df['Date'] = df['Date'].apply(lambda x: datetime.datetime.strptime(x, "%Y-%m-%d"))
+    df.drop_duplicates(inplace=True)
+    df = df.sort_values(by='Date').reset_index(drop=True)
 
-    print(f'\nData for {len(symbol_list)} symbols retrieved.')
-    return
+    if after is not None:
+        df = df.loc[df['Date'] >= datetime.datetime.strptime(after, '%Y-%m-%d')].reset_index(drop=True)
+    elif from_to is not None:
+        date1 = datetime.datetime.strptime(from_to[0], '%Y-%m-%d')
+        date2 = datetime.datetime.strptime(from_to[1], '%Y-%m-%d')
+        df = df.loc[(df.Date >= date1) & (df.Date <= date2)].reset_index(drop=True)
+    elif n_days != 0:
+        df = df.tail(n_days).reset_index(drop=True)
+
+    return df
+
+def wrapper(symbols=None, verbose=False):
+    """ Only .EQ supported right now """
+    if symbols is None:
+        symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCON', 'IRCTC',
+                   'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
+    for symbol in symbols:
+        raw_pv_data = get_raw_hpv_clean_raw(symbol, 2018, verbose=verbose)
+        print('Loaded raw_pv_data.shape: %s, from / to: %s / %s' %
+              (raw_pv_data.shape, raw_pv_data['Date'].values[0], raw_pv_data['Date'].values[-1]))
+        ca_mults = process_ca(raw_pv_data, verbose=verbose)
+        pv_data = pd.merge(raw_pv_data, ca_mults[['Date', 'mult']], on='Date', how='left')
+        for c in ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Last',
+                  'VWAP', '52_Wk_H', '52_Wk_L']:
+            pv_data[c] = round(pv_data[c] * pv_data['mult'], 2)
+        for c in ['Traded Value']:
+            pv_data[c] = pv_data[c] * 100000
+        output_filename = os.path.join(OUTPUT_DIR, f'{symbol}/pv_data_adjusted.csv')
+        pv_data.to_csv(output_filename, index=False)
+        print('Coroporate Actions applied, saved to %s\n' %
+              os.path.join(*(output_filename.split('\\')[5:])))
+
+    return True
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     verbose = False
-    download_type = 'ytd' if len(sys.argv) == 1 else sys.argv[1]
-    symbols = sys.argv[2:] if len(sys.argv) > 2 else \
-        ['NIFTY 50.IDX', 'NIFTY BANK.IDX', 'NIFTY 500.IDX',
-         'ASIANPAINT.EQ', 'BRITANNIA.EQ', 'HDFC.EQ', 'ICICIBANK.EQ', 'IRCTC.EQ', 'JUBLFOOD.EQ',
-         'TATASTEEL.EQ', 'ZYDUSLIFE.EQ']
 
-    print(f'\nDownload Type: {download_type}\nSymbols: {symbols} ::: \n')
-    download_all(symbols, download_type, verbose)
+    symbols = sys.argv[1:] if len(sys.argv) > 1 else ['ASIANPAINT', 'BRITANNIA']
+
+    wrapper(symbols, verbose)
