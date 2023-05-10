@@ -92,8 +92,10 @@ def test_all():
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', None])
     assert pv_data.shape[0] > 0 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data(['NIFTY 50', 'NIFTY MIDCAP 150', 'NIFTY IT'],
-                                           ['2023-04-01', '2023-05-02'])
+                                             ['2023-04-01', '2023-05-02'])
     assert pv_data.shape[0] == 54 and pv_data.shape[1] == 13
+    pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31'])
+    assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 13
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''

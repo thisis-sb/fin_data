@@ -12,7 +12,7 @@ import pandas as pd
 import pygeneric.misc as pyg_misc
 import pygeneric.http_utils as pyg_http_utils
 import pygeneric.archiver as pyg_archiver
-from base_utils import prepare_json_key
+from fin_data.ind_cf.base_utils import prepare_json_key
 
 PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/01_nse_fr_filings')
 PATH_2 = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/02_nse_fr_archive')

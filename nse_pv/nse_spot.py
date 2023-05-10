@@ -7,7 +7,7 @@ import os
 import sys
 import glob
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import fin_data.common.nse_cf_ca as nse_cf_ca
 import fin_data.common.nse_symbols as nse_symbols
 import pygeneric.http_utils as http_utils
@@ -15,9 +15,9 @@ import pygeneric.http_utils as http_utils
 ''' ------------------------------------------------------------------------------------------ '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
-        DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
+        self.data_path = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
 
-        data_files = glob.glob(os.path.join(DATA_PATH, 'processed/**/cm_bhavcopy_all.csv.parquet'))
+        data_files = glob.glob(os.path.join(self.data_path, 'processed/**/cm_bhavcopy_all.csv.parquet'))
         self.pv_data = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data.sort_values(by='Date', inplace=True)
         self.pv_data.reset_index(drop=True, inplace=True)
@@ -27,7 +27,7 @@ class NseSpotPVData:
             print('%d symbols, %d market days' % (len(self.pv_data['Symbol'].unique()),
                                                   len(self.pv_data['Date'].unique())))
 
-        data_files = glob.glob(os.path.join(DATA_PATH,
+        data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/index_bhavcopy_all.csv.parquet'))
         md_idx = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'), '00_manual/00_meta_data.xlsx'),
                                sheet_name='nse_indices')
@@ -42,7 +42,7 @@ class NseSpotPVData:
                    len(self.pv_data_index['Symbol'].unique()),
                    len(self.pv_data_index['Date'].unique())))
 
-        data_files = glob.glob(os.path.join(DATA_PATH,
+        data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/etf_bhavcopy_all.csv.parquet'))
         md_etf = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
                                             '00_manual/00_meta_data.xlsx'), sheet_name='nse_etf')
@@ -146,6 +146,13 @@ class NseSpotPVData:
         df_adj.reset_index(drop=True, inplace=True)
         return df_adj
 
+    def get_latest_closing_prices(self, symbols, series='EQ'):
+        date_from = (datetime.today() - timedelta(10)).strftime('%Y-%m-%d')
+        df = self.get_pv_data(symbols, series=series, from_to=[date_from, None])
+        last_date = df['Date'].unique()[-1]
+        df = df.loc[df['Date'] == last_date].reset_index(drop=True)
+        return df
+
     ''' get_index_pv_data -------------------------------------------------------------------- '''
     def get_index_pv_data(self, symbols, from_to):
         if type(symbols) == str:
@@ -160,6 +167,18 @@ class NseSpotPVData:
         else:
             df = df.loc[(df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d')) &
                         (df['Date'] <= datetime.strptime(from_to[1], '%Y-%m-%d'))]
+
+        ''' messy workaround right now'''
+        if from_to[0] < '2018-01-01' and type(symbols) == str:
+            legacy_files = glob.glob(os.path.join(self.data_path, 'legacy/%s/*.csv' % symbols))
+            legacy_df = pd.concat([pd.read_csv(f) for f in legacy_files])
+            legacy_df['Date'] = pd.to_datetime(legacy_df['Date'])
+            legacy_df = legacy_df.loc[legacy_df['Date'] >= from_to[0]]  # know that it stops E2017
+            legacy_df['Index Name'] = df['Index Name'].values[0]
+            legacy_df['Symbol'] = symbols
+            legacy_df['Volume'] = legacy_df['Volume'] * 1000  # sure ??
+            legacy_df.drop(columns='Adj Close', inplace=True)
+            df = pd.concat([df, legacy_df]).sort_values(by='Date')
 
         df.reset_index(drop=True, inplace=True)
         return df
@@ -225,5 +244,7 @@ def get_spot_quote(symbols, index=False):
 
 ''' ------------------------------------------------------------------------------------------ '''
 if __name__ == '__main__':
-    NseSpotPVData(verbose=True)
+    xx = NseSpotPVData(verbose=True)
     print('Full test code in wrappers/test_nse_spot.py')
+    print(xx.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31']).shape)
+    print(xx.get_index_pv_data('NIFTY 50', ['2018-01-01', '2019-12-31']).shape)
