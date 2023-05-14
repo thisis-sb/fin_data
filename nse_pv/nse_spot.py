@@ -203,6 +203,17 @@ class NseSpotPVData:
 
 ''' ------------------------------------------------------------------------------------------ '''
 def get_spot_quote(symbols, index=False):
+    """
+    Only EQ & IDX supported currently.
+    For others, to do:
+    --> check meta-info & check if activeSeries or debtSeries
+
+    https://www.nseindia.com/api/equity-meta-info?symbol=BRITANNIA
+    debtSeries --> https://www.nseindia.com/api/quote-bonds?index=BRITANNIA
+
+    https://www.nseindia.com/api/equity-meta-info?symbol=HDFC
+    activeSeries --> https://www.nseindia.com/api/quote-equity?symbol=HDFC&series=W3
+    """
     if index:
         url = 'https://www.nseindia.com/api/allIndices'
     else:
@@ -215,6 +226,7 @@ def get_spot_quote(symbols, index=False):
     if not index:
         return {
             'Symbol': get_dict['info']['symbol'],
+            'Series':'EQ',
             'Date': get_dict['metadata']['lastUpdateTime'][0:11],
             'Open': get_dict['priceInfo']['open'],
             'High': get_dict['priceInfo']['intraDayHighLow']['max'],
@@ -230,7 +242,8 @@ def get_spot_quote(symbols, index=False):
                                 'last': 'lastPrice', 'percentChange': 'pChange'})
         df['Date'] = get_dict['timestamp'][:11]
         df['Close'] = None
-        df = df[['Symbol', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice',
+        df['Series'] = 'IDX'
+        df = df[['Symbol', 'Series', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice',
                  'pChange']]
 
         if type(symbols) == str:

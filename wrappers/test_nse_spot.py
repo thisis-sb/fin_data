@@ -111,7 +111,7 @@ def test_all():
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting get_spot_quote ... ', end='')
-    keys  = ['Symbol', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice', 'pChange']
+    keys  = ['Symbol', 'Series', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice', 'pChange']
     assert list(nse_spot.get_spot_quote('ASIANPAINT').keys()) == keys
     assert list(nse_spot.get_spot_quote('NIFTY 50', index=True).keys()) == keys
     res = nse_spot.get_spot_quote(['NIFTY IT', 'NIFTY MIDCAP 150', 'NIFTY AUTO'], index=True)
@@ -137,6 +137,19 @@ def test_all():
     # symbols = nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])
     df = nse_spot_obj.get_pv_data(symbols, from_to=['2019-01-01', None], verbose=True)
     print('Done. time check:', datetime_utils.time_since_last(0), 'seconds\n')
+
+    ''' ----------------------------------------------------------------------------------- '''
+    print('\nTesting for NseSpotPVData().get_pv_data (for same symbol, different series) ...')
+    ''' TO DO: Need a better solution (for current ones & not discontinued)'''
+    assert nse_spot_obj.get_pv_data('HDFC', series='EQ',
+                                    from_to=['2023-05-12', None])['Close'].values[0] == 2776.3
+    assert nse_spot_obj.get_pv_data('HDFC', series='W3',
+                                    from_to=['2023-05-12', None])['Close'].values[0] == 560.55
+    assert nse_spot_obj.get_pv_data('BRITANNIA', series='EQ',
+                                    from_to=['2023-05-12', None])['Close'].values[0] == 4616.50
+    assert nse_spot_obj.get_pv_data('BRITANNIA', series='N3',
+                                    from_to=['2023-05-12', None])['Close'].values[0] == 29.54
+    print('OK')
 
     return True
 
