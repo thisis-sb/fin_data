@@ -1,5 +1,5 @@
 """
-test nse_spot.py
+test all: nse_symbols, nse_spot
 """
 ''' --------------------------------------------------------------------------------------- '''
 
@@ -7,13 +7,13 @@ import os
 from datetime import datetime, timedelta
 import pygeneric.datetime_utils as datetime_utils
 import fin_data.nse_pv.nse_spot as nse_spot
-from fin_data.common import nse_config
+from fin_data.common import nse_config, nse_symbols
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
 
 LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv')
 
 ''' --------------------------------------------------------------------------------------- '''
-def test_all():
+def test_nse_spot():
     import fin_data.nse_pv.get_hpv as get_hpv
 
     ''' ----------------------------------------------------------------------------------- '''
@@ -88,14 +88,14 @@ def test_all():
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting get_index_pv_data ... ', end='')
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', '2023-05-02'])
-    assert pv_data.shape[0] == 18 and pv_data.shape[1] == 13
+    assert pv_data.shape[0] == 18 and pv_data.shape[1] == 15
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', None])
-    assert pv_data.shape[0] > 0 and pv_data.shape[1] == 13
+    assert pv_data.shape[0] > 0 and pv_data.shape[1] == 15
     pv_data = nse_spot_obj.get_index_pv_data(['NIFTY 50', 'NIFTY MIDCAP 150', 'NIFTY IT'],
                                              ['2023-04-01', '2023-05-02'])
-    assert pv_data.shape[0] == 54 and pv_data.shape[1] == 13
+    assert pv_data.shape[0] == 54 and pv_data.shape[1] == 15
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31'])
-    assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 13
+    assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 15
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
@@ -133,7 +133,7 @@ def test_all():
     print('\nTesting for NseSpotPVData().get_pv_data (for large # of multiple symbols) ...')
     datetime_utils.time_since_last(0)
     import fin_data.common.nse_symbols as nse_symbols
-    symbols = nse_symbols.get_symbols(['ind_nifty50list', 'ind_niftynext50list'])
+    symbols = nse_symbols.get_symbols(['NIFTY 50', 'NIFTY NEXT 50'])
     # symbols = nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])
     df = nse_spot_obj.get_pv_data(symbols, from_to=['2019-01-01', None], verbose=True)
     print('Done. time check:', datetime_utils.time_since_last(0), 'seconds\n')
@@ -151,6 +151,18 @@ def test_all():
                                     from_to=['2023-05-12', None])['Close'].values[0] == 29.54
     print('OK')
 
+    ''' ----------------------------------------------------------------------------------- '''
+    print('\nTesting for NseSpotPVData().get_avg_closing_price ...')
+    res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2021-12-31')
+    assert abs(res[2] - 3425.62) < 0.1, 'ERROR! %s Unexpected average value' % res
+
+    res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2022-12-31')
+    assert abs(res[2] - 3057.05) < 0.1, 'ERROR! %s Unexpected average value' % res
+
+    res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2023-03-31')
+    assert abs(res[2] - 2784.44) < 0.1, 'ERROR! %s Unexpected average value' % res
+    print('OK')
+
     return True
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -159,4 +171,6 @@ if __name__ == '__main__':
     Doing / To do: move everything to NseSpotPVData
     - live quote --> get all in one get and don't refresh if last get > 1 min old
     """
-    test_all()
+    nse_symbols.test_me()
+    test_nse_spot()
+    print('\n>>>>>>>>>> TO DO: Test ind_cf <<<<<<<<<<')

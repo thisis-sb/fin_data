@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import pandas as pd
+from numpy import datetime_as_string
 from datetime import datetime, date, timedelta
 import fin_data.common.nse_cf_ca as nse_cf_ca
 import fin_data.common.nse_symbols as nse_symbols
@@ -21,7 +22,6 @@ class NseSpotPVData:
         self.pv_data = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data.sort_values(by='Date', inplace=True)
         self.pv_data.reset_index(drop=True, inplace=True)
-        # self.pv_data['Date'] = pd.to_datetime(self.pv_data['Date'], format="%Y-%m-%d")
         if verbose:
             print('pv_data.shape shape:', self.pv_data.shape, end=', ')
             print('%d symbols, %d market days' % (len(self.pv_data['Symbol'].unique()),
@@ -29,8 +29,8 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/index_bhavcopy_all.csv.parquet'))
-        md_idx = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'), '00_manual/00_meta_data.xlsx'),
-                               sheet_name='nse_indices')
+        md_idx = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
+                                            '00_manual/00_meta_data.xlsx'), sheet_name='indices')
         self.pv_data_index = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_index = pd.merge(self.pv_data_index, md_idx, on='Index Name', how='left')
         self.pv_data_index.sort_values(by=['Symbol', 'Date'], inplace=True)
@@ -152,6 +152,32 @@ class NseSpotPVData:
         last_date = df['Date'].unique()[-1]
         df = df.loc[df['Date'] == last_date].reset_index(drop=True)
         return df
+
+    def get_avg_closing_price(self, symbol, mid_point, band=5, series='EQ'):
+        try:
+            date1 = (datetime.strptime(mid_point, '%Y-%m-%d') - timedelta(days=3*band))
+            date2 = (datetime.strptime(mid_point, '%Y-%m-%d') + timedelta(days=3*band))
+            from_to = [date1.strftime('%Y-%m-%d'), date2.strftime('%Y-%m-%d')]
+            pv_df = NseSpotPVData(verbose=False).get_pv_data(symbol, series=series, from_to=from_to)
+            pv_df = pv_df[['Date', 'Close']]
+            if pv_df.shape[0] == 0:
+                raise ValueError('No PV data found')
+
+            pv_df['MP'] = mid_point
+            pv_df['MP'] = pd.to_datetime(pv_df['MP'])
+            pv_df['DD'] = abs(pv_df['MP'] - pv_df['Date'])
+
+            xx = pv_df.sort_values(by='DD')
+            actual_mid_point = xx.reset_index(drop=True).loc[0, 'Date']
+            mid_point_idx = pv_df.loc[pv_df['Date'] == actual_mid_point].index[0]
+
+            pv_df = pv_df[mid_point_idx - (band - 1):mid_point_idx + (band + 1)]
+
+            return [datetime_as_string(pv_df['Date'].values[0], unit='D'),
+                    datetime_as_string(pv_df['Date'].values[-1], unit='D'),
+                    round(pv_df['Close'].mean(), 2)]
+        except Exception as e:
+            raise ValueError('average_share_price: %s %s [%s]' % (symbol, mid_point, e))
 
     ''' get_index_pv_data -------------------------------------------------------------------- '''
     def get_index_pv_data(self, symbols, from_to):

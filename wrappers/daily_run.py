@@ -5,9 +5,9 @@ Daily run sequence
 
 import sys
 import datetime
-from fin_data.common import nse_config
+from fin_data.common import nse_config, nse_symbols
 from fin_data.nse_pv import get_hpv, get_dr, process_dr
-from fin_data.wrappers import test_nse_spot
+from fin_data.wrappers import test_all
 from fin_data.ind_cf import scrape_nse, download_fr
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -37,8 +37,10 @@ def e2e_nse_pv():
     process_dr.wrapper(current_year)
     print(">>> Daily task / nse_pv.process_dr::: Finished\n")
 
+    assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
+
     print("\n>>> Daily task / test nse_pv.nse_spot::: Starting")
-    if not test_nse_spot.test_all():
+    if not test_all.test_nse_spot():
         print('ERROR! nse_spot.test_all FAILED')
         assert False, 'ERROR! nse_spot.test_all FAILED'
     print("\n>>> Daily task / test nse_pv.nse_spot::: Finished")

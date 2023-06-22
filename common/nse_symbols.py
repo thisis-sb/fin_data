@@ -9,14 +9,19 @@ import glob
 import pandas as pd
 
 CONFIG_ROOT = os.getenv('CONFIG_ROOT')
+PATH_0 = os.path.join(CONFIG_ROOT, '00_manual')
 PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '01_nse_symbols')
 PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_symbols(file_list, series=None):
+def get_symbols(indices, series=None):
+    idx_list = pd.read_excel(os.path.join(PATH_0, '00_meta_data.xlsx'), sheet_name='indices')
+    idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)].dropna().reset_index(drop=True)
+    file_list = idx_list['File Name'].unique()
+
     symbols = pd.DataFrame()
     for f in file_list:
-        df = pd.read_csv(os.path.join(PATH_2, f'{f}.csv'))
+        df = pd.read_csv(os.path.join(PATH_2, f))
         if 'Group' in df.columns:
             df.rename(columns={'Group':'Series'}, inplace=True)
         symbols = pd.concat([symbols, df[['Series', 'Symbol']]])
@@ -44,28 +49,26 @@ def get_isin(symbol):
     return df['ISIN'].values[0]
 
 def index_filename(code=0):
-    indices = {1: 'ind_nifty50list',
-               2: 'ind_niftynext50list',
-               3: 'ind_niftymidcap150list',
-               4: 'ind_niftysmallcap250list',
-               5: 'ind_niftymicrocap250_list',
-               6: 'ind_nifty100list',
-               7: 'ind_nifty200list',
-               8: 'ind_nifty500list',
-               9: 'ind_niftytotalmarket_list'}
-    for idx, f in enumerate(glob.glob(os.path.join(PATH_2, '*.csv'))):
-        ff = os.path.basename(f).split('.')[0]
-        if ff not in indices.values():
-            indices[list(indices.keys())[-1] + 1] = os.path.basename(f).split('.')[0]
-    return indices if code == 0 else indices[code]
+    idx_list = pd.read_excel(os.path.join(PATH_0, '00_meta_data.xlsx'), sheet_name='indices')
+    idx_list = idx_list.dropna().reset_index(drop=True)
+    idx_list.reset_index(inplace=True)
+    idx_list['index'] = idx_list['index'] + 1
+    idx_map = dict(zip(idx_list['index'], idx_list['Symbol']))
+    return idx_map if code == 0 else idx_map[code]
 
-# ----------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-    print('Testing nse_config ... ', end='')
+def test_me():
+    print('Testing nse_config ... ')
 
-    assert len(get_symbols(['ind_nifty50list'])) == 50
-    assert len(get_symbols(['ind_nifty100list'])) == 100
-    assert len(get_symbols(['ind_nifty50list', 'ind_nifty100list'])) == 100
+    assert len(get_symbols(['NIFTY 50'])) == 50
+    assert len(get_symbols(['NIFTY 100'])) == 100
+    assert len(get_symbols(['NIFTY 50', 'NIFTY 100'])) == 100
+    assert sorted(get_symbols(['NIFTY 50', 'NIFTY NEXT 50'])) == sorted(get_symbols(['NIFTY 100']))
+    x1 = sorted(get_symbols(['NIFTY 100', 'NIFTY MIDCAP 150', 'NIFTY SMALLCAP 250']))
+    x2 = sorted(get_symbols(['NIFTY 500']))
+    assert list(set(x1) - set(x2)) == ['TATAMTRDVR'] or list(set(x2) - set(x1)) == ['TATAMTRDVR'], \
+        '%s / %s' % (list(set(x1) - set(x2)), list(set(x2) - set(x1)))
+    assert sorted(get_symbols(['NIFTY 500', 'NIFTY MICROCAP 250'])) == sorted(
+        get_symbols(['NIFTY TOTAL MARKET']))
 
     sc_df = get_symbol_changes()
     sc_df = sc_df.loc[sc_df['Old Symbol'].isin(['CADILAHC', 'LTI'])]
@@ -77,11 +80,15 @@ if __name__ == '__main__':
     assert get_older_symbols('LTIM') == ['LTI']
 
     assert get_isin('ZYDUSLIFE') == 'INE010B01027'
-    print('All OK')
+    print('Testing nse_config ... OK')
+    return True
+
+''' --------------------------------------------------------------------------------------- '''
+if __name__ == '__main__':
+    test_me()
 
     idxs = index_filename(0)
     print('\nAll indices with codes:')
     print('\n'.join(['%2s    %s' % (c, idxs[c]) for c in idxs.keys()]))
 
-    assert (index_filename(1) == 'ind_nifty50list') and\
-           (index_filename(15) == 'sect_ind_NIFTY_HEALTHCARE_INDEX')
+    assert (index_filename(1) == 'NIFTY 50') and (index_filename(20) == 'NIFTY HEALTHCARE')
