@@ -176,6 +176,7 @@ def prepare_symbols_master():
 
     indices_master.drop(columns=['Company Name'], inplace=True)
     df = pd.merge(equity_l_df, indices_master, on=['Symbol', 'ISIN', 'Series'], how='left')
+    df['nse_index_name'] = df['nse_index_name'].fillna('xxxxx')
     df.to_csv(os.path.join(PATH_1, 'symbols_master.csv'), index=False)
     print('Done, shape:', df.shape)
 
