@@ -247,7 +247,7 @@ def get_spot_quote(symbols, index=False):
             raise ValueError(f'Invalid argument symbols type {type(symbols)}')
         url = 'https://www.nseindia.com/api/quote-equity?symbol=' + symbols
 
-    get_dict = http_utils.http_get(url)
+    get_dict = http_utils.HttpDownloads().http_get_json(url)
 
     if not index:
         return {

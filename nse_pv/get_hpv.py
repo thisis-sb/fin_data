@@ -1,5 +1,5 @@
 """
-Download NSE Historical Price-Volume Data via direct http_get & apply corporate actions
+Download NSE Historical Price-Volume data from NSE website & apply corporate actions
 Usage: symbols
 """
 
@@ -31,6 +31,7 @@ def get_raw_hpv_for_year(symbol, year, verbose=False):
     end_date = date_today if year == date_today.year else datetime.date(year, 12, 31)
 
     results = []
+    http_obj = http_utils.HttpDownloads(website='nse')
     while from_date <= end_date:
         to_date = from_date + datetime.timedelta(100)
         if to_date > end_date:
@@ -47,7 +48,7 @@ def get_raw_hpv_for_year(symbol, year, verbose=False):
         url = 'https://www.nseindia.com/api/historical/securityArchives?' + \
               'from=%s&to=%s&symbol=%s' % (from_date_str, to_date_str, symbol) + \
               '&dataType=priceVolumeDeliverable&series=EQ'
-        get_dict = http_utils.http_get(url)
+        get_dict = http_obj.http_get_json(url)
 
         df = pd.DataFrame(get_dict['data'])
         if df.shape[0] > 0:

@@ -31,10 +31,11 @@ def get_nse_fr_filings(year):
                '&from_date=%s&to_date=%s' % (from_to[0], from_to[1])
 
     res_df = pd.DataFrame()
+    http_obj = pyg_html_utils.HttpDownloads(website='nse')
     for period in ['', 'HalfYearly', 'Annual', 'Others']:
         print('  [%s]: ' % period, end='')
         url = url_base + '&period=%s' % period
-        cf_fr_json = pyg_html_utils.http_get(url)
+        cf_fr_json = http_obj.http_get_json(url)
         if len(cf_fr_json) == 0:
             print('no data, ignoring')
         else:
