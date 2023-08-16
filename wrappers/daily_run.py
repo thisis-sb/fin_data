@@ -5,7 +5,7 @@ Daily run sequence
 
 import sys
 import datetime
-from fin_data.common import nse_config, nse_symbols
+from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr
 from fin_data.wrappers import test_all
 from fin_data.ind_cf import scrape_nse, download_fr
@@ -21,7 +21,8 @@ def e2e_nse_pv():
     nse_config.get_symbol_changes()
     nse_config.get_misc()
     nse_config.prepare_symbols_master()
-    nse_config.get_cf_ca(current_year)
+    nse_config.custom_indices()
+    nse_config.download_cf_ca(current_year)
     print(">>> Daily task / nse_config::: Finished\n")
 
     print("\n>>> Daily task / nse_pv.get_hpv::: Starting")
@@ -38,6 +39,7 @@ def e2e_nse_pv():
     print(">>> Daily task / nse_pv.process_dr::: Finished\n")
 
     assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
+    assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
 
     print("\n>>> Daily task / test nse_pv.nse_spot::: Starting")
     if not test_all.test_nse_spot():

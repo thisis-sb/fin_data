@@ -58,6 +58,8 @@ class NseSpotPVData:
                    len(self.pv_data_etf['Date'].unique())))
             self.pv_data_etf.to_csv(os.path.join(os.getenv('LOG_ROOT'), 'df.csv'))
 
+        self.nse_ca_obj = nse_cf_ca.NseCorporateActions(verbose=verbose)
+
         return
 
     def get_52week_high_low(self, df):
@@ -87,7 +89,7 @@ class NseSpotPVData:
                 df_row[col] = df_row[col] * mult if df_row['idx'] < date_idx else df_row[col]
             return df_row
 
-        symbol_cfca = nse_cf_ca.get_corporate_actions(symbol)
+        symbol_cfca = self.nse_ca_obj.get_cf_ca_multipliers(symbol)
         for idx, cfca_row in symbol_cfca.iterrows():
             for col in cols1:
                 df_raw.loc[df_raw['Date'] < cfca_row['Ex Date'], col] =\

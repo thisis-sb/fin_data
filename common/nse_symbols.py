@@ -57,12 +57,12 @@ def index_filename(code=0):
     return idx_map if code == 0 else idx_map[code]
 
 def test_me():
-    print('Testing nse_config ... ')
+    print('\nTesting nse_symbols ... ')
 
     if len(get_symbols(['NIFTY 50'])) != 50 or len(get_symbols(['NIFTY 100'])) != 100 or \
             len(get_symbols(['NIFTY 50', 'NIFTY 100'])) == 100:
         print('!!! WARNING !!! Index symbols size not as expected')
-        print('    NIFTY 50: %d, NIFTY 100: %d, NIFTY 50 + NIFTY 100: %d\n'
+        print('    NIFTY 50: %d, NIFTY 100: %d, NIFTY 50 + NIFTY 100: %d'
               % (len(get_symbols(['NIFTY 50'])), len(get_symbols(['NIFTY 100'])),
               len(get_symbols(['NIFTY 50', 'NIFTY 100']))))
     assert sorted(get_symbols(['NIFTY 50', 'NIFTY NEXT 50'])) == sorted(get_symbols(['NIFTY 100']))
@@ -76,15 +76,17 @@ def test_me():
 
     sc_df = get_symbol_changes()
     sc_df = sc_df.loc[sc_df['Old Symbol'].isin(['CADILAHC', 'LTI'])]
-    print(sc_df)
+    # print(sc_df)
     assert [d.astype(str)[0:10] for d in sc_df['Date of Change'].values] == \
            ['2022-03-07', '2022-12-05']
+    assert list(sc_df['Old Symbol']) == ['CADILAHC', 'LTI']
+    assert list(sc_df['New Symbol']) == ['ZYDUSLIFE', 'LTIM']
 
     assert get_older_symbols('ZYDUSLIFE') == ['CADILAHC']
     assert get_older_symbols('LTIM') == ['LTI']
 
     assert get_isin('ZYDUSLIFE') == 'INE010B01027'
-    print('Testing nse_config ... OK')
+    print('Testing nse_symbols ... OK')
     return True
 
 ''' --------------------------------------------------------------------------------------- '''

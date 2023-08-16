@@ -7,13 +7,13 @@ import os
 from datetime import datetime, timedelta
 import pygeneric.datetime_utils as datetime_utils
 import fin_data.nse_pv.nse_spot as nse_spot
-from fin_data.common import nse_config, nse_symbols
+from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
 
 LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv')
 
 ''' --------------------------------------------------------------------------------------- '''
-def test_nse_spot():
+def test_nse_spot(verbose=False):
     import fin_data.nse_pv.get_hpv as get_hpv
 
     ''' ----------------------------------------------------------------------------------- '''
@@ -23,9 +23,10 @@ def test_nse_spot():
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=False)
 
     def check_data(symbol_list, dates):
-        print('Checking for dates', dates, '...')
+        print('Checking for dates', dates, '...', end=' ')
         for symbol in symbol_list:
-            print(f'  {symbol} ...', end=' ')
+            if verbose:
+                print(f'\n  {symbol} ...', end=' ')
 
             df1 = nse_spot_obj.get_pv_data(symbol, series='EQ', from_to=dates)
             df2 = get_hpv.get_pv_data(symbol, from_to=dates)
@@ -46,7 +47,9 @@ def test_nse_spot():
                 assert (~(abs(df1[c] - df2[c]) < 100)).sum() <= 1, \
                     'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 100)).sum())
 
-            print('OK')
+            if verbose:
+                print('OK', end='')
+        print('') if verbose else print('OK')
         return
 
     end_date = (datetime.today() - timedelta(days=7)).strftime('%Y-%m-%d')
@@ -59,11 +62,12 @@ def test_nse_spot():
     check_data(symbols, ['2018-01-01', end_date])
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting NseSpotPVData().get_pv_data (for multiple symbols) ...')
+    print('\nTesting NseSpotPVData().get_pv_data (for multiple symbols) ...', end=' ')
     """ To do: Verify 52_Wk_H/L"""
     multi_df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', end_date])
     for symbol in symbols:
-        print(f'  {symbol} ...', end=' ')
+        if verbose:
+            print(f'\n  {symbol} ...', end=' ')
         df1 = multi_df.loc[multi_df['Symbol'] == symbol].reset_index(drop=True)
         df2 = get_hpv.get_pv_data(symbol, from_to=['2018-01-01', end_date])
 
@@ -83,7 +87,9 @@ def test_nse_spot():
             assert (~(abs(df1[c] - df2[c]) < 100)).sum() <= 1, \
                 'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 100)).sum())
 
-        print('OK')
+        if verbose:
+            print('OK', end='')
+    print('') if verbose else print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting get_index_pv_data ... ', end='')
@@ -171,6 +177,7 @@ if __name__ == '__main__':
     Doing / To do: move everything to NseSpotPVData
     - live quote --> get all in one get and don't refresh if last get > 1 min old
     """
-    nse_symbols.test_me()
-    test_nse_spot()
+    assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
+    assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
+    test_nse_spot(verbose=False)
     print('\n>>>>>>>>>> TO DO: Test ind_cf <<<<<<<<<<')

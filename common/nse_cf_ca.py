@@ -10,68 +10,107 @@ import pandas as pd
 import re
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_corporate_actions(symbol, cutoff_date='2018-01-01'):
-    ca_files = glob.glob(os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca/CF_CA_*.csv'))
-    ca_df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
-    ca_df['Ex Date'] = pd.to_datetime(pd.to_datetime(ca_df['Ex Date']), '%Y-%m-%d')
-    ca_df = ca_df.loc[ca_df['Ex Date'] >= cutoff_date]
-    ca_df = ca_df.loc[(ca_df['Series'] == 'EQ') & (ca_df['Symbol'] == symbol)]
-    ca_df.reset_index(inplace=True, drop=True)
+class NseCorporateActions:
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+        ca_files = glob.glob(os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca/CF_CA_*.csv'))
+        df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
+        df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
+        df['Ex Date'] = pd.to_datetime(pd.to_datetime(df['Ex Date']), '%Y-%m-%d')
+        self.cf_data = df.reset_index(drop=True)
+        if self.verbose:
+            print('NseCorporateActions: cf_data', self.cf_data.shape)
 
-    ca_df['Purpose'] = ca_df['Purpose'].str.strip()
-    ca_df = ca_df.loc[ca_df['Purpose'].str.contains('^Bonus') |\
-                      ca_df['Purpose'].str.contains('^Face Value Split')]
+    def get_history(self, symbol, cutoff_date='2018-01-01', prettyprint=False):
+        df = self.cf_data.loc[self.cf_data['Ex Date'] >= cutoff_date]
+        df = df.loc[(df['Series'] == 'EQ') & (df['Symbol'] == symbol)].reset_index(drop=True)
+        df['Purpose'] = df['Purpose'].str.strip()
 
-    ca_df['Ex Date'] = pd.to_datetime(ca_df['Ex Date'])
-    ca_df['Ex Date'] = ca_df['Ex Date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-    ca_df = ca_df.sort_values(by='Ex Date', ascending=True).reset_index(drop=True)
-    ca_df = ca_df[['Symbol', 'Purpose', 'Ex Date']].reset_index(drop=True)
-
-    ca_df['MULT'] = 1.0
-
-    for idx, row in ca_df.iterrows():
-        purpose = row['Purpose'].strip()
-        purpose = purpose.replace('/', ' / ')
-        mult    = row['MULT']
-        if purpose[0:16] == 'Face Value Split':
-            tok = re.split('Rs | Re ', row['Purpose'])
-            try:
-                mult *= float(tok[1].split('/-')[0]) / float(tok[2].split('/-')[0])
-            except:
-                mult *= float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
-        elif purpose[0:5] == 'Bonus':
-            tok = purpose.split()[1].split(':')
-            mult *= (float(tok[0]) + float(tok[1])) / float(tok[1])
+        if self.verbose:
+            print('NseCorporateActions.get_history(%s): %s' % (symbol, df.shape))
+        if not prettyprint:
+            return df[['Symbol', 'Series', 'Face Value', 'Ex Date', 'Record Date', 'Purpose']]
         else:
-            assert 1 == 0
-        ca_df.loc[idx, 'MULT'] = mult
-    return ca_df[['Symbol', 'Ex Date', 'MULT', 'Purpose']]
+            df['Face Value'] = df['Face Value'].astype(int)
+            xx = ''
+            for ix, row in df.iterrows():
+                max_width = 60
+                xx = xx + '%d) Ex/Record Dates: %s / %s\n%s\n\n' \
+                     % (ix, row['Ex Date'].strftime('%d-%b-%Y'), row['Record Date'],
+                        row['Purpose'])
+            return xx
 
-def get_cf_ca_mult(symbol, dates_series):
-    res_df = pd.DataFrame({'Date':dates_series})
-    res_df['MULT'] = 1.0
-    res_df['DIV']  = 1.0
-    res_df['idx'] = res_df.index
+    def get_cf_ca_multipliers(self, symbol, cutoff_date='2018-01-01'):
+        ca_df = self.get_history(symbol, cutoff_date=cutoff_date)
+        ca_df = ca_df.loc[ca_df['Purpose'].str.contains('^Bonus') |\
+                          ca_df['Purpose'].str.contains('^Face Value Split')]
 
-    ca_df = get_corporate_actions(symbol)
-    if ca_df.shape[0] == 0:
-        return res_df
+        ca_df['Ex Date'] = pd.to_datetime(ca_df['Ex Date'])
+        ca_df['Ex Date'] = ca_df['Ex Date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+        ca_df = ca_df.sort_values(by='Ex Date', ascending=True).reset_index(drop=True)
+        ca_df = ca_df[['Symbol', 'Purpose', 'Ex Date']].reset_index(drop=True)
 
-    def adj(df_row, date_idx, mult):
-        df_row['MULT'] = df_row['MULT'] / mult if df_row['idx'] < date_idx else df_row['MULT']
-        df_row['DIV']  = df_row['DIV'] * mult if df_row['idx'] < date_idx else df_row['DIV']
-        return df_row
+        ca_df['MULT'] = 1.0
 
-    for idx, cfca_row in ca_df.iterrows():
-        date_idx = res_df.index[res_df['Date'] == cfca_row['Ex Date']]
-        if len(date_idx) != 0:
-            res_df = res_df.apply(lambda row: adj(row, date_idx[0], cfca_row['MULT']), axis=1)
-    res_df.drop(columns=['idx'], inplace=True)
-    return res_df
+        for idx, row in ca_df.iterrows():
+            purpose = row['Purpose'].strip()
+            purpose = purpose.replace('/', ' / ')
+            mult    = row['MULT']
+            if purpose[0:16] == 'Face Value Split':
+                tok = re.split('Rs | Re ', row['Purpose'])
+                try:
+                    mult *= float(tok[1].split('/-')[0]) / float(tok[2].split('/-')[0])
+                except:
+                    mult *= float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+            elif purpose[0:5] == 'Bonus':
+                tok = purpose.split()[1].split(':')
+                mult *= (float(tok[0]) + float(tok[1])) / float(tok[1])
+            else:
+                assert 1 == 0
+            ca_df.loc[idx, 'MULT'] = mult
+        return ca_df[['Symbol', 'Ex Date', 'MULT', 'Purpose']]
+
+def test_me():
+    test_dates = ['2018-01-01', '2023-03-31']
+    test_data = {
+        'BRITANNIA': {'Ex Date': ['2018-11-29'], 'MULT': [2.0]},
+        'KBCGLOBAL': {'Ex Date': ['2020-07-02', '2021-08-12', '2021-08-12'],'MULT': [5.0, 2.0, 5.0]},
+        'RADIOCITY': {'Ex Date': ['2019-02-20', '2020-03-12'], 'MULT': [5.0, 1.25]},
+        'IRCTC': {'Ex Date': ['2021-10-28'], 'MULT': [5.0]},
+        'MOTOGENFIN': {'Ex Date': ['2020-06-19'], 'MULT': [2.0]},
+        'MARINE': {'Ex Date': ['2021-02-18'], 'MULT': [5.0]},
+        'AVANTIFEED': {'Ex Date': ['2018-06-26'], 'MULT': [1.5]},
+        'TATASTEEL': {'Ex Date': ['2022-07-28'], 'MULT': [10.0]}
+    }
+
+    nse_ca_obj = NseCorporateActions()
+    print('\nTesting nse_cf_ca ...', end=' ')
+    for symbol in test_data.keys():
+        x1 = nse_ca_obj.get_cf_ca_multipliers(symbol, cutoff_date=test_dates[0])
+        x1 = x1.loc[x1['Ex Date'] <= test_dates[1]]
+        x2 = {'Ex Date':list(x1['Ex Date']), 'MULT':list(x1['MULT'])}
+        assert x2 == test_data[symbol], 'ERROR! cf_ca_multpliers not matching, %s/%s' \
+                                        % (x2, test_data[symbol])
+    print('OK')
+    return True
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    for symbol in ['BRITANNIA', 'KBCGLOBAL', 'RADIOCITY', 'IRCTC', 'MOTOGENFIN', 'MARINE',
-                   'AVANTIFEED', 'TATASTEEL']:
-        xx = get_corporate_actions(symbol)
-        print('%s\t%s' % (symbol, {'Ex Date':list(xx['Ex Date']), 'MULT':list(xx['MULT'])}))
+    if len(sys.argv) == 1:
+        print('\nTesting %s:' % '/'.join(str(__file__).split('/')[-3:]), end=' ')
+        test_me()
+        print('outcome: %s, Done' % test_me())
+        exit()
+
+    cutoff_date = '2021-04-01'
+    symbol = sys.argv[1]
+    nse_ca_obj = NseCorporateActions()
+    print('\nFor %s' % symbol)
+    print('NseCorporateActions.get_history prettyprint:\n%s' %
+          nse_ca_obj.get_history(symbol, cutoff_date=cutoff_date, prettyprint=True))
+    xx = nse_ca_obj.get_cf_ca_multipliers(symbol, cutoff_date=cutoff_date)
+    if xx.shape[0] > 0:
+        print('NseCorporateActions.get_cf_ca_multipliers\n%s' %
+              {'Ex Date':list(xx['Ex Date']), 'MULT':list(xx['MULT'])})
+    else:
+        print('NseCorporateActions.get_cf_ca_multipliers\nNone')

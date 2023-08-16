@@ -13,6 +13,7 @@ import pygeneric.http_utils as pyg_http_utils
 PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '01_nse_symbols')
 PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
 PATH_3 = os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca')
+PATH_4 = os.path.join(os.getenv('CONFIG_ROOT'), '05_portfolio')
 
 ''' --------------------------------------------------------------------------------------- '''
 def symbols_and_broad_indices():
@@ -152,6 +153,7 @@ def get_misc():
     df = pd.read_csv(nse_symbol_changes_url, encoding='cp1252')
     df.to_csv(CONFIG_DIR + '/01_nse_symbols/fo_mktlots.csv', index=False)
     print('Done, shape:', df.shape)"""
+    return
 
 def prepare_symbols_master():
     print('Preparing symbols_master.csv', end=' ... ')
@@ -179,8 +181,22 @@ def prepare_symbols_master():
     df['nse_index_name'] = df['nse_index_name'].fillna('xxxxx')
     df.to_csv(os.path.join(PATH_1, 'symbols_master.csv'), index=False)
     print('Done, shape:', df.shape)
+    return
 
-def get_cf_ca(year):
+def custom_indices():
+    x1 = pd.read_csv(os.path.join(PATH_1, 'symbols_master.csv'))
+    x2 = pd.read_excel(os.path.join(PATH_4, '0_STOCKS_DB.xlsx'),
+                       sheet_name='WLs', skiprows=1,
+                       usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
+    x2 = x2[x2['WL#'].notna()]
+    x2['WL#'] = x2['WL#'].astype(int).astype(str)
+    x2 = x2.loc[x2['WL#'] == '1']
+    x1 = x1.loc[x1['Symbol'].isin(x2['Symbol'].unique())]
+    x1[['Symbol', 'ISIN', 'Series', 'Company Name', 'Industry']].\
+        to_csv(os.path.join(PATH_2, 'watchlist_1.csv'), index=False)
+    return
+
+def download_cf_ca(year):
     date_today = date.today()
     assert int(year) <= date_today.year, 'Invalid Year %s' % year
     if int(year) == date_today.year:
@@ -240,8 +256,9 @@ if __name__ == '__main__':
         get_symbol_changes()
         get_misc()
         prepare_symbols_master()
+        custom_indices()
     else:
         for year in years:
-            get_cf_ca(year)
+            download_cf_ca(year)
 
     print('Last 6 pe_dates:', last_n_pe_dates(6))
