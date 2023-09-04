@@ -256,6 +256,7 @@ def get_spot_quote(symbols, index=False):
             'Symbol': get_dict['info']['symbol'],
             'Series':'EQ',
             'Date': get_dict['metadata']['lastUpdateTime'][0:11],
+            'epoch': str(int(datetime.strptime(get_dict['metadata']['lastUpdateTime'], '%d-%b-%Y %H:%M:%S').timestamp())),
             'Open': get_dict['priceInfo']['open'],
             'High': get_dict['priceInfo']['intraDayHighLow']['max'],
             'Low': get_dict['priceInfo']['intraDayHighLow']['min'],
@@ -269,9 +270,10 @@ def get_spot_quote(symbols, index=False):
         df = df.rename(columns={'index': 'Symbol', 'open': 'Open', 'high': 'High', 'low': 'Low',
                                 'last': 'lastPrice', 'percentChange': 'pChange'})
         df['Date'] = get_dict['timestamp'][:11]
+        df['epoch'] = str(int(datetime.strptime(get_dict['timestamp'], '%d-%b-%Y %H:%M:%S').timestamp()))
         df['Close'] = None
         df['Series'] = 'IDX'
-        df = df[['Symbol', 'Series', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice',
+        df = df[['Symbol', 'Series', 'Date', 'epoch', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice',
                  'pChange']]
 
         if type(symbols) == str:
@@ -285,6 +287,8 @@ def get_spot_quote(symbols, index=False):
 
 ''' ------------------------------------------------------------------------------------------ '''
 if __name__ == '__main__':
+    print('Spot Quote EQ :::\n%s\n' % get_spot_quote('ASIANPAINT'))
+    print('Spot Quote IX :::\n%s\n' % get_spot_quote(['NIFTY 50', 'NIFTY MIDCAP 150'], index=True))
     xx = NseSpotPVData(verbose=True)
     print('Full test code in wrappers/test_nse_spot.py')
     print(xx.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31']).shape)

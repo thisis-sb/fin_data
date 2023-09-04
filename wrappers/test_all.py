@@ -117,7 +117,8 @@ def test_nse_spot(verbose=False):
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting get_spot_quote ... ', end='')
-    keys  = ['Symbol', 'Series', 'Date', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice', 'pChange']
+    keys  = ['Symbol', 'Series', 'Date', 'epoch', 'Open', 'High', 'Low', 'Close',
+             'previousClose', 'lastPrice', 'pChange']
     assert list(nse_spot.get_spot_quote('ASIANPAINT').keys()) == keys
     assert list(nse_spot.get_spot_quote('NIFTY 50', index=True).keys()) == keys
     res = nse_spot.get_spot_quote(['NIFTY IT', 'NIFTY MIDCAP 150', 'NIFTY AUTO'], index=True)
