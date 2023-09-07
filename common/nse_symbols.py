@@ -60,7 +60,7 @@ def test_me():
     print('\nTesting nse_symbols ... ')
 
     if len(get_symbols(['NIFTY 50'])) != 50 or len(get_symbols(['NIFTY 100'])) != 100 or \
-            len(get_symbols(['NIFTY 50', 'NIFTY 100'])) == 100:
+            len(get_symbols(['NIFTY 50', 'NIFTY 100'])) != 100:
         print('!!! WARNING !!! Index symbols size not as expected')
         print('    NIFTY 50: %d, NIFTY 100: %d, NIFTY 50 + NIFTY 100: %d'
               % (len(get_symbols(['NIFTY 50'])), len(get_symbols(['NIFTY 100'])),
