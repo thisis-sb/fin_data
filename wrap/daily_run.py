@@ -7,7 +7,7 @@ import sys
 import datetime
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr
-from fin_data.wrappers import test_all
+from fin_data.wrap import test_all
 from fin_data.ind_cf import scrape_nse, download_fr
 
 ''' --------------------------------------------------------------------------------------- '''
