@@ -3,16 +3,17 @@ All indices. Currently NSE only.
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import pandas as pd
 
-PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '00_manual')
-PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
+PATH_1 = CONFIG_ROOT
+PATH_2 = os.path.join(DATA_ROOT, r'00_common\02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def list_indices(index_name=None):
-    idx_list = pd.read_excel(os.path.join(PATH_1, '00_meta_data.xlsx'), sheet_name='indices')\
+    idx_list = pd.read_excel(os.path.join(PATH_1, '01_fin_data.xlsx'), sheet_name='indices')\
         .dropna().reset_index(drop=True)
     result_dict = {}
     if index_name is None:

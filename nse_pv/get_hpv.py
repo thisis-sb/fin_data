@@ -2,9 +2,9 @@
 Download NSE Historical Price-Volume data from NSE website & apply corporate actions
 Usage: symbols
 """
-
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import datetime
@@ -15,16 +15,18 @@ import pandas as pd
 from time import sleep
 import pygeneric.http_utils as http_utils
 
-OUTPUT_DIR     = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
+OUTPUT_DIR = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_raw_hpv_for_year(symbol, year, verbose=False):
     date_today = datetime.date.today()
     output_filename = os.path.join(OUTPUT_DIR, f'{symbol}/raw', f'{year}.csv')
 
-    print('For %s for year %d -->' % (symbol, year))
+    if verbose:
+        print('For %s for year %d ...' % (symbol, year), end=' ')
     if date_today.year != year and os.path.exists(output_filename):
-        print('  Data already downloaded')
+        if verbose:
+            print('data already downloaded')
         return
 
     from_date = datetime.date(year, 1, 1)
@@ -80,6 +82,7 @@ def get_raw_hpv_for_year(symbol, year, verbose=False):
     return True
 
 def get_raw_hpv_clean_raw(symbol, from_year, verbose=False):
+    print('%s: Getting data ...' % symbol)
     [get_raw_hpv_for_year(symbol, y, verbose)
      for y in range(from_year, datetime.date.today().year + 1)]
 
@@ -106,7 +109,7 @@ def process_ca(raw_pv, verbose=False):
     xx['mult'] = 1.0
     # print(corp_actions)
     if verbose:
-        corp_actions.to_csv(os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv/corp_actions.csv'))
+        corp_actions.to_csv(os.path.join(LOG_DIR, 'corp_actions.csv'))
 
     for idx, row in corp_actions.iterrows():
         to_index = idx
@@ -142,7 +145,7 @@ def process_ca(raw_pv, verbose=False):
     return xx
 
 def get_pv_data(symbol, after=None, from_to=None, n_days=0):
-    API_DATA_PATH = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/01_api')
+    API_DATA_PATH = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
     df = pd.read_csv(os.path.join(API_DATA_PATH, f'{symbol}/pv_data_adjusted.csv'))
     df['Date'] = df['Date'].apply(lambda x: datetime.datetime.strptime(x, "%Y-%m-%d"))
     df.drop_duplicates(inplace=True)

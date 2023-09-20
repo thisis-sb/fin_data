@@ -5,13 +5,14 @@ Usage: year
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 from datetime import datetime
 import pandas as pd
 import pygeneric.http_utils as pyg_html_utils
 
-OUTPUT_FOLDER = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/01_nse_fr_filings')
+OUTPUT_FOLDER = os.path.join(DATA_ROOT, '02_ind_cf/01_nse_fr_filings')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_nse_fr_filings(year):

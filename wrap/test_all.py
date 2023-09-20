@@ -3,14 +3,13 @@ test all: nse_symbols, nse_spot
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 from datetime import datetime, timedelta
 import pygeneric.datetime_utils as datetime_utils
 import fin_data.nse_pv.nse_spot as nse_spot
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
-
-LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/01_nse_pv')
 
 ''' --------------------------------------------------------------------------------------- '''
 def test_nse_spot(verbose=False):

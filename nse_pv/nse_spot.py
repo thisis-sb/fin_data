@@ -3,6 +3,7 @@ API class & other methods for NSE spot PV data
 """
 ''' ------------------------------------------------------------------------------------------ '''
 
+from fin_data.env import *
 import os
 import sys
 import glob
@@ -16,7 +17,7 @@ import pygeneric.http_utils as http_utils
 ''' ------------------------------------------------------------------------------------------ '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
-        self.data_path = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
+        self.data_path = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
 
         data_files = glob.glob(os.path.join(self.data_path, 'processed/**/cm_bhavcopy_all.csv.parquet'))
         self.pv_data = pd.concat([pd.read_parquet(f) for f in data_files])
@@ -29,8 +30,7 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/index_bhavcopy_all.csv.parquet'))
-        md_idx = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
-                                            '00_manual/00_meta_data.xlsx'), sheet_name='indices')
+        md_idx = pd.read_excel(os.path.join(CONFIG_ROOT, '01_fin_data.xlsx'), sheet_name='indices')
         self.pv_data_index = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_index = pd.merge(self.pv_data_index, md_idx, on='Index Name', how='left')
         self.pv_data_index.sort_values(by=['Symbol', 'Date'], inplace=True)
@@ -44,8 +44,7 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/etf_bhavcopy_all.csv.parquet'))
-        md_etf = pd.read_excel(os.path.join(os.getenv('CONFIG_ROOT'),
-                                            '00_manual/00_meta_data.xlsx'), sheet_name='nse_etf')
+        md_etf = pd.read_excel(os.path.join(CONFIG_ROOT, '01_fin_data.xlsx'), sheet_name='nse_etf')
         self.pv_data_etf = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_etf = pd.merge(self.pv_data_etf, md_etf,
                                     on=['Symbol', 'SECURITY', 'UNDERLYING'], how='left')
@@ -56,7 +55,7 @@ class NseSpotPVData:
             print('%d etfs symbols, %d market days' %
                   (len(self.pv_data_etf['Symbol'].unique()),
                    len(self.pv_data_etf['Date'].unique())))
-            self.pv_data_etf.to_csv(os.path.join(os.getenv('LOG_ROOT'), 'df.csv'))
+            self.pv_data_etf.to_csv(os.path.join(LOG_DIR, 'df.csv'))
 
         self.nse_ca_obj = nse_cf_ca.NseCorporateActions(verbose=verbose)
 

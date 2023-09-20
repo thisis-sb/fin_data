@@ -4,16 +4,17 @@ Usage: None or a list of years
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import pandas as pd
 from datetime import date
 import pygeneric.http_utils as pyg_http_utils
 
-PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '01_nse_symbols')
-PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
-PATH_3 = os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca')
-PATH_4 = os.path.join(os.getenv('CONFIG_ROOT'), '05_portfolio')
+PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
+PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
+PATH_3 = os.path.join(DATA_ROOT, '00_common/03_nse_cf_ca')
+PATH_4 = CONFIG_ROOT
 
 ''' --------------------------------------------------------------------------------------- '''
 def symbols_and_broad_indices():
@@ -185,7 +186,7 @@ def prepare_symbols_master():
 
 def custom_indices():
     x1 = pd.read_csv(os.path.join(PATH_1, 'symbols_master.csv'))
-    x2 = pd.read_excel(os.path.join(PATH_4, '0_STOCKS_DB.xlsx'),
+    x2 = pd.read_excel(os.path.join(PATH_4, '10_STOCKS_DB.xlsx'),
                        sheet_name='WLs', skiprows=1,
                        usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
     x2 = x2[x2['WL#'].notna()]

@@ -5,18 +5,16 @@ Process downloaded FR's in metadata_s1:
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import pandas as pd
 import traceback
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base_utils
 import pygeneric.archiver as pyg_archiver
 import pygeneric.datetime_utils as pyg_dt_utils
-# from settings import DATA_ROOT
 
-# SUB_PATH1 = '02_ind_cf'
-PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '01_fin_data/02_ind_cf')
+PATH_1 = os.path.join(DATA_ROOT, '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':

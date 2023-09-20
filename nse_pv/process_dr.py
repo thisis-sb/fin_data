@@ -4,6 +4,7 @@ Usage: [year]
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import datetime
 import os
 import sys
@@ -15,8 +16,8 @@ import pygeneric.datetime_utils as datetime_utils
 import fin_data.common.nse_symbols as nse_symbols
 from pygeneric.archiver import Archiver
 
-PATH_1 = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
-PATH_2 = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr/processed')
+PATH_1 = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
+PATH_2 = os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed')
 
 ''' --------------------------------------------------------------------------------------- '''
 def remove_existing_files(file_regex, verbose=False):
@@ -69,7 +70,7 @@ def process_index_reports(year, verbose=False):
 
     if verbose:
         print(df.columns)
-        df.to_csv(os.path.join(os.getenv('HOME_DIR'), '98_log/01_fin_data/df_index.csv'))
+        df.to_csv(os.path.join(LOG_DIR, 'df_index.csv'))
 
     print('Index bhavcopy: from %s to %s, %d days' %
           (df['Date'].values[0].astype('datetime64[D]'),
@@ -135,7 +136,7 @@ def process_etf_reports(year, verbose=False):
 
     if verbose:
         print(df.shape, df.columns)
-        df.to_csv(os.path.join(os.getenv('HOME_DIR'), '98_log/01_fin_data/df_etf.csv'))
+        df.to_csv(os.path.join(LOG_DIR, 'df_etf.csv'))
 
     print('ETF bhavcopy: from %s to %s, %d days' %
           (df['Date'].values[0].astype('datetime64[D]'), df['Date'].values[-1].astype('datetime64[D]'),

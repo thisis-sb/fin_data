@@ -3,6 +3,7 @@
 # Usage: nse_symbols_file n_to_download
 # --------------------------------------------------------------------------------------------
 
+from fin_data.env import *
 import datetime
 import os
 import sys
@@ -20,7 +21,6 @@ import traceback
 import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import api.nse_symbols
-from settings import DATA_ROOT, CONFIG_DIR, LOG_DIR
 
 # DRIVER_TYPE = 'Firefox'
 DRIVER_TYPE = 'Chrome'

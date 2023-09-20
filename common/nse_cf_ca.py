@@ -3,17 +3,20 @@ Corporate Actions (bonus & split) history for NSE Symbols
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import glob
 import os
 import sys
 import pandas as pd
 import re
 
+PATH_1 = os.path.join(DATA_ROOT, '00_common/03_nse_cf_ca')
+
 ''' --------------------------------------------------------------------------------------- '''
 class NseCorporateActions:
     def __init__(self, verbose=False):
         self.verbose = verbose
-        ca_files = glob.glob(os.path.join(os.getenv('CONFIG_ROOT'), '03_nse_cf_ca/CF_CA_*.csv'))
+        ca_files = glob.glob(os.path.join(PATH_1, 'CF_CA_*.csv'))
         df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
         df = pd.concat([pd.read_csv(f) for f in ca_files], axis=0)
         df['Ex Date'] = pd.to_datetime(pd.to_datetime(df['Ex Date']), '%Y-%m-%d')

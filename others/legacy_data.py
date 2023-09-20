@@ -1,15 +1,17 @@
 """
 To get select legacy data. Workaround for now as NSE doesn't have this data easily available
+NOTE!!! Only required for holding_returns
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 from pathlib import Path
 import datetime
 import pandas as pd
 import yfinance as yf
 
-OUTPUT_DIR = os.path.join(os.getenv('DATA_ROOT'), '01_nse_pv/02_dr')
+OUTPUT_DIR = os.path.join(DATA_ROOT, '01_nse_pv/02_dr')
 symbols_dict = {'NIFTY 50': '^NSEI'}
 
 ''' --------------------------------------------------------------------------------------- '''

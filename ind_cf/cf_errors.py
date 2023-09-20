@@ -3,6 +3,7 @@ Analyze CF errors
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import sys
 import os
 import glob
@@ -11,9 +12,8 @@ import pandas as pd
 from base_utils import prepare_json_key
 import pygeneric.misc as pyg_misc
 
-PATH_1  = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/01_nse_fr_filings')
-PATH_2  = os.path.join(os.getenv('DATA_ROOT'), '02_ind_cf/02_nse_fr_archive')
-LOG_DIR = LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
+PATH_1  = os.path.join(DATA_ROOT, '02_ind_cf/01_nse_fr_filings')
+PATH_2  = os.path.join(DATA_ROOT, '02_ind_cf/02_nse_fr_archive')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     def save_errors(df_x, filename):
         if df_x.shape[0] > 0:
             df_x.to_csv(filename, index=False)
-            print('Saved in', filename[len(os.getenv('HOME_DIR')) + 1:])
+            print('Saved in', os.path.dirname(filename))
         else:
             if os.path.exists(filename):
                 os.remove(filename)

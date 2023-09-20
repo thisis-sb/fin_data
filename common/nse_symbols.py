@@ -3,19 +3,19 @@ Symbols for NSE indices & historic symbol changes
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import glob
 import pandas as pd
 
-CONFIG_ROOT = os.getenv('CONFIG_ROOT')
-PATH_0 = os.path.join(CONFIG_ROOT, '00_manual')
-PATH_1 = os.path.join(os.getenv('CONFIG_ROOT'), '01_nse_symbols')
-PATH_2 = os.path.join(os.getenv('CONFIG_ROOT'), '02_nse_indices')
+PATH_0 = CONFIG_ROOT
+PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
+PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_symbols(indices, series=None):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '00_meta_data.xlsx'), sheet_name='indices')
+    idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
     idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)].dropna().reset_index(drop=True)
     file_list = idx_list['File Name'].unique()
 
@@ -49,7 +49,7 @@ def get_isin(symbol):
     return df['ISIN'].values[0]
 
 def index_filename(code=0):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '00_meta_data.xlsx'), sheet_name='indices')
+    idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
     idx_list = idx_list.dropna().reset_index(drop=True)
     idx_list.reset_index(inplace=True)
     idx_list['index'] = idx_list['index'] + 1

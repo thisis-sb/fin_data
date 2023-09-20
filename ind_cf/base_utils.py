@@ -2,6 +2,8 @@
 Base utils for CF downloads & processing
 """
 ''' --------------------------------------------------------------------------------------- '''
+
+from fin_data.env import *
 import glob
 import os
 import sys
@@ -10,8 +12,6 @@ import requests
 import xml.etree.ElementTree as ElementTree
 import pygeneric.http_utils as pyg_html_utils
 import pygeneric.fin_utils as pyg_fin_utils
-
-LOG_DIR = os.path.join(os.getenv('LOG_ROOT'), '01_fin_data/02_ind_cf')
 
 ''' --------------------------------------------------------------------------------------- '''
 def prepare_json_key(row):

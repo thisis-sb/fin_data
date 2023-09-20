@@ -4,12 +4,13 @@ Usage: dd-mmm-yyyy [dd-mmm-yyyy ...]
 """
 ''' --------------------------------------------------------------------------------------- '''
 
+from fin_data.env import *
 import os
 import sys
 import pandas as pd
 from datetime import datetime, timedelta
 
-OUT_DIR = os.path.join(os.getenv('DATA_ROOT'), '09_amfi')
+OUT_DIR = os.path.join(DATA_ROOT, '09_amfi')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_raw_amfi_data(last_date):
