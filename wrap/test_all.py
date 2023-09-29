@@ -211,7 +211,7 @@ def test_perf_nse_pv(verbose=False):
                   % (ix, dt, df.shape, elapsed_time('tpnp_1')))
 
     print('Step5: Testing 100 calls to get_avg_closing_price: ', end=' ')
-    symbols = nse_symbols.get_symbols([ix])
+    symbols = nse_symbols.get_symbols(['NIFTY 500'], series='EQ')
     elapsed_time('tpnp_1')
     for i in range(100):
         _ = nse_spot_obj.get_avg_closing_price(random.choice(symbols), mid_point='2023-06-30')
