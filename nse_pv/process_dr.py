@@ -12,7 +12,7 @@ import glob
 from io import BytesIO
 from zipfile import ZipFile
 import pandas as pd
-import pygeneric.datetime_utils as datetime_utils
+from pygeneric.datetime_utils import elapsed_time
 import fin_data.common.nse_symbols as nse_symbols
 from pygeneric.archiver import Archiver
 
@@ -21,8 +21,7 @@ PATH_2 = os.path.join(DATA_ROOT, '01_nse_pv/02_dr/processed')
 
 ''' --------------------------------------------------------------------------------------- '''
 def remove_existing_files(file_regex, verbose=False):
-    datetime_utils.time_since_last(0)
-    datetime_utils.time_since_last(1)
+    elapsed_time(1)
 
     files_to_remove = glob.glob(os.path.join(PATH_2, file_regex))
 
@@ -33,13 +32,12 @@ def remove_existing_files(file_regex, verbose=False):
         if verbose: print('No files to remove', end='. ')
 
     if verbose:
-        print('time check (remove files):', datetime_utils.time_since_last(1), 'seconds', end='. ')
+        print('time check (remove files):', elapsed_time(1), 'seconds', end='. ')
     return
 
 ''' --------------------------------------------------------------------------------------- '''
 def process_index_reports(year, verbose=False):
-    datetime_utils.time_since_last(0)
-    datetime_utils.time_since_last(1)
+    elapsed_time(0)
 
     archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/indices_close.zip'))
     if verbose:
@@ -77,14 +75,13 @@ def process_index_reports(year, verbose=False):
            df['Date'].values[-1].astype('datetime64[D]'),
            len(df['Date'].unique())))
 
-    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', elapsed_time(0), 'seconds')
 
     return
 
 ''' --------------------------------------------------------------------------------------- '''
 def process_etf_reports(year, verbose=False):
-    datetime_utils.time_since_last(0)
-    datetime_utils.time_since_last(1)
+    elapsed_time(0)
 
     archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/PR.zip'))
     if verbose:
@@ -142,14 +139,13 @@ def process_etf_reports(year, verbose=False):
           (df['Date'].values[0].astype('datetime64[D]'), df['Date'].values[-1].astype('datetime64[D]'),
            len(df['Date'].unique())))
 
-    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', elapsed_time(0), 'seconds')
 
     return
 
 ''' --------------------------------------------------------------------------------------- '''
 def process_cm_reports(year, symbols=None, verbose=False):
-    datetime_utils.time_since_last(0)
-    datetime_utils.time_since_last(1)
+    elapsed_time([0, 1])
 
     archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/cm_bhavcopy.zip'))
     if verbose:
@@ -207,7 +203,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
     df = df.merge(df2[['Date', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']],
                   on=['Date', 'Symbol', 'Series'], how='left').reset_index(drop=True)
     if verbose:
-        print('time check (load files):', datetime_utils.time_since_last(1), 'seconds')
+        print('time check (load files):', elapsed_time(1), 'seconds')
 
     all_symbols = sorted(df['Symbol'].unique())
     print(len(all_symbols), 'symbols found in raw data')
@@ -223,14 +219,14 @@ def process_cm_reports(year, symbols=None, verbose=False):
             symbols_to_process.remove(row['Old Symbol'])
 
     if verbose:
-        print('time check (symbol changes):', datetime_utils.time_since_last(1), 'seconds')
+        print('time check (symbol changes):', elapsed_time(1), 'seconds')
 
     df = df.loc[df['Symbol'].isin(symbols_to_process)]
     df['Date'] = pd.to_datetime(df['Date'], format="%Y-%m-%d")
     df = df.sort_values(by=['Symbol', 'Date']).reset_index(drop=False)
     if verbose:
         print(f'Done. {len(symbols_to_process)} processed. Data shape:', df.shape)
-        print('time check (filtering):', datetime_utils.time_since_last(1), 'seconds')
+        print('time check (filtering):', elapsed_time(1), 'seconds')
 
     df = df[['Date', 'Symbol', 'Series', 'Open', 'High', 'Low', 'Close', 'Prev Close',
              'Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades',
@@ -248,7 +244,7 @@ def process_cm_reports(year, symbols=None, verbose=False):
           % (year, len(df['Symbol'].unique()), len(df['Date'].unique()), first_date, last_date,
              date_1yago.strftime('%Y-%m-%d')))
 
-    print('time check (total time taken):', datetime_utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', elapsed_time(0), 'seconds')
 
     return
 
