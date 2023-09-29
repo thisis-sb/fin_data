@@ -159,7 +159,7 @@ class NseSpotPVData:
             date1 = (datetime.strptime(mid_point, '%Y-%m-%d') - timedelta(days=3*band))
             date2 = (datetime.strptime(mid_point, '%Y-%m-%d') + timedelta(days=3*band))
             from_to = [date1.strftime('%Y-%m-%d'), date2.strftime('%Y-%m-%d')]
-            pv_df = NseSpotPVData(verbose=False).get_pv_data(symbol, series=series, from_to=from_to)
+            pv_df = self.get_pv_data(symbol, series=series, from_to=from_to)
             pv_df = pv_df[['Date', 'Close']]
             if pv_df.shape[0] == 0:
                 raise ValueError('No PV data found')

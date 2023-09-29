@@ -5,14 +5,16 @@ test all: nse_symbols, nse_spot
 
 from fin_data.env import *
 import os
+import random
 from datetime import datetime, timedelta
-import pygeneric.datetime_utils as datetime_utils
 import fin_data.nse_pv.nse_spot as nse_spot
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
+from pygeneric.datetime_utils import elapsed_time, remove_timers
 
 ''' --------------------------------------------------------------------------------------- '''
 def test_nse_spot(verbose=False):
+    elapsed_time('test_nse_spot_0')
     import fin_data.nse_pv.get_hpv as get_hpv
 
     ''' ----------------------------------------------------------------------------------- '''
@@ -135,14 +137,12 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    ''' Include after performance problem is fixed '''
     print('\nTesting for NseSpotPVData().get_pv_data (for large # of multiple symbols) ...')
-    datetime_utils.time_since_last(0)
+    elapsed_time(0)
     import fin_data.common.nse_symbols as nse_symbols
     symbols = nse_symbols.get_symbols(['NIFTY 50', 'NIFTY NEXT 50'])
-    # symbols = nse_symbols.get_symbols(['ind_nifty500list', 'ind_niftymicrocap250_list'])
-    df = nse_spot_obj.get_pv_data(symbols, from_to=['2019-01-01', None], verbose=True)
-    print('Done. time check:', datetime_utils.time_since_last(0), 'seconds\n')
+    df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', None], verbose=True)
+    print('Done. time check:', elapsed_time(0), 'seconds\n')
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting for NseSpotPVData().get_pv_data (for same symbol, different series) ...')
@@ -169,15 +169,63 @@ def test_nse_spot(verbose=False):
     assert abs(res[2] - 2784.44) < 0.1, 'ERROR! %s Unexpected average value' % res
     print('OK')
 
+    print('test_nse_spot: total time taken: %.2f' % elapsed_time('test_nse_spot_0'))
+    remove_timers('test_nse_spot_0')
+
     return True
+
+def test_perf_nse_pv(verbose=False):
+    print('\nStarting test_perf_nse_pv :::')
+    print('Testing NseSpotPVData() ...')
+    elapsed_time(['tpnp_0', 'tpnp_1'])
+    nse_spot_obj = nse_spot.NseSpotPVData(verbose=verbose)
+    print('Step1: initialization: %.2f' % elapsed_time('tpnp_1'))
+
+    for dt in ['2021-01-01', '2018-01-01']:
+        symbols = nse_symbols.get_symbols(['NIFTY 50'])
+        print('\nRunning Step2 for date:', dt, '...')
+        for i in range(0, 5):
+            one_symbol = random.choice(symbols)
+            elapsed_time('tpnp_1')
+            df = nse_spot_obj.get_pv_data(one_symbol, from_to=[dt, None], verbose=verbose)
+            print('  Step2: get_pv_data: [%s] since [%s]: shape: %s, time taken: %.2f'
+                  % (one_symbol, dt, df.shape, elapsed_time('tpnp_1')))
+
+        print('Running Step3 for date:', dt, '...')
+        n_few_symbols = 0
+        for i in range(0,5):
+            n_few_symbols += 10
+            few_symbols = [random.choice(symbols) for x in range(0, n_few_symbols)]
+            elapsed_time('tpnp_1')
+            df = nse_spot_obj.get_pv_data(few_symbols, from_to=[dt, None], verbose=verbose)
+            print('  Step3: get_pv_data: %d symbols since [%s]: shape: %s, time taken: %.2f'
+                  % (len(few_symbols), dt, df.shape, elapsed_time('tpnp_1')))
+
+        elapsed_time('tpnp_1')
+        print('Running Step4 for date:', dt, '...')
+        for ix in ['NIFTY 50', 'NIFTY 100', 'NIFTY MIDCAP 150',
+                   'NIFTY SMALLCAP 250', 'NIFTY TOTAL MARKET']:
+            symbols = nse_symbols.get_symbols([ix])
+            df = nse_spot_obj.get_pv_data(symbols, from_to=[dt, None], verbose=verbose)
+            print('  Step4: get_pv_data: [%s] since [%s]: shape: %s, time taken: %.2f'
+                  % (ix, dt, df.shape, elapsed_time('tpnp_1')))
+
+    print('Step5: Testing 100 calls to get_avg_closing_price: ', end=' ')
+    symbols = nse_symbols.get_symbols([ix])
+    elapsed_time('tpnp_1')
+    for i in range(100):
+        _ = nse_spot_obj.get_avg_closing_price(random.choice(symbols), mid_point='2023-06-30')
+    print('total time: %.2f' % elapsed_time('tpnp_1'))
+
+    print('test_nse_spot: total time taken: %.2f' % elapsed_time('tpnp_0'))
+    remove_timers(['tpnp_0', 'tpnp_1'])
+
+    return
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    """
-    Doing / To do: move everything to NseSpotPVData
-    - live quote --> get all in one get and don't refresh if last get > 1 min old
-    """
     assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
     assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
-    test_nse_spot(verbose=False)
-    print('\n>>>>>>>>>> TO DO: Test ind_cf <<<<<<<<<<')
+    test_nse_spot()
+    test_perf_nse_pv()
+    print('\n>>>>>>>>>> Test ind_cf: See fin_apps <<<<<<<<<<')
