@@ -47,6 +47,8 @@ def e2e_nse_pv():
         assert False, 'ERROR! nse_spot.test_all FAILED'
     print("\n>>> Daily task / test nse_pv.nse_spot::: Finished")
 
+    return
+
 def e2e_ind_cf(year):
     print('Running e2e_ind_cf ...')
 
@@ -55,9 +57,11 @@ def e2e_ind_cf(year):
     print("\n>>> Task / scrape_nse: Finished")
 
     print("\n>>> Task / download_fr: Starting")
-    mgr = download_fr.Manager(year)
+    mgr = download_fr.DownloadManagerNSE(year)
     mgr.download()
     print("\n>>> Task / download_fr: Finished")
+
+    return
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
@@ -65,8 +69,8 @@ if __name__ == '__main__':
 
     if opt == 'nse_pv':
         e2e_nse_pv()
-    elif opt == 'ind_cf':
+    elif opt == 'nse_cf':
         year = datetime.datetime.today().year
         e2e_ind_cf(year)
     else:
-        print('\nERROR! No option specified. Usage: nse_pv OR ind_cf')
+        print('\nERROR! Bad options. Usage: nse_pv OR nse_cf. bse_cf: Run download_fr direcly')

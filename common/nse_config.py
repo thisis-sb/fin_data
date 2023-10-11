@@ -8,7 +8,7 @@ from fin_data.env import *
 import os
 import sys
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 import pygeneric.http_utils as pyg_http_utils
 
 PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
@@ -237,12 +237,12 @@ def download_cf_ca(year):
         print('Done. cf_ca_df.shape:', cf_ca_df.shape)
     return
 
-def last_n_pe_dates(n):
-    today_str = date.today().strftime('%Y-%m-%d')
+def last_n_pe_dates(n, last_period=None):
+    end_date_str = date.today().strftime('%Y-%m-%d') if last_period is None else last_period
     pe_dates = []
-    for yr in range(2018, date.today().year + 1):
+    for yr in range(2018, datetime.strptime(end_date_str, '%Y-%m-%d').year + 1):
         for dt in ['%d-03-31' % yr, '%d-06-30' % yr, '%d-09-30' % yr, '%d-12-31' % yr]:
-            if dt <= today_str:
+            if dt <= end_date_str:
                 pe_dates.append(dt)
     return pe_dates[-n:]
 

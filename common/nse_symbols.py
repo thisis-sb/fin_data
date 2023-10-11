@@ -45,8 +45,7 @@ def get_older_symbols(symbol):
 def get_isin(symbol):
     df = pd.read_csv(os.path.join(PATH_1, f'EQUITY_L.csv'))
     df = df.loc[df['Symbol'] == symbol].reset_index(drop=True)
-    assert df.shape[0] == 1
-    return df['ISIN'].values[0]
+    return 'unknown-isin' if df.shape[0] == 0 else df['ISIN'].values[0]
 
 def index_filename(code=0):
     idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
