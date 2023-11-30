@@ -64,7 +64,10 @@ class NseCorporateActions:
                 try:
                     mult *= float(tok[1].split('/-')[0]) / float(tok[2].split('/-')[0])
                 except:
-                    mult *= float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+                    try:
+                        mult *= float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+                    except:
+                        assert False, 'purpose: [%s] [%s]' % (row['Ex Date'], purpose)
             elif purpose[0:5] == 'Bonus':
                 tok = purpose.split()[1].split(':')
                 mult *= (float(tok[0]) + float(tok[1])) / float(tok[1])
@@ -105,7 +108,7 @@ if __name__ == '__main__':
         print('outcome: %s, Done' % test_me())
         exit()
 
-    cutoff_date = '2021-04-01'
+    cutoff_date = '2018-01-01'
     symbol = sys.argv[1]
     nse_ca_obj = NseCorporateActions()
     print('\nFor %s' % symbol)
