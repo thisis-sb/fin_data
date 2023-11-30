@@ -17,32 +17,41 @@ PATH_2  = os.path.join(DATA_ROOT, '02_ind_cf/02_nse_fr_archive')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    fr_filings = pd.concat(pd.read_csv(f) for f in glob.glob(os.path.join(PATH_1, 'CF_FR_2*.csv')))
-    fr_filings = fr_filings.sort_values(by='toDate').reset_index(drop=True)
-    fr_filings['toDate'] = pd.to_datetime(fr_filings['toDate'])
-    fr_filings['key'] = fr_filings.apply(lambda x: prepare_json_key(x), axis=1)
-    print('Loaded fr_filings, shape:', fr_filings.shape)
+    from datetime import datetime
+    from argparse import ArgumentParser
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument("-c", action='store_true', help='clear errors')
+    arg_parser.add_argument("-y", type=int, help='calendar year')
+    arg_parser.add_argument("-sy", help='nse symbol')
+    arg_parser.add_argument('-a', action='store_true', help='clear all errors flag')
+    args = arg_parser.parse_args()
 
-    metadata = pd.concat(pd.read_csv(f) for f in glob.glob(os.path.join(PATH_2, '**/metadata.csv')))
-    print('Loaded metadata, shape:', metadata.shape)
-
-    print('check-1: json_keys:', set(fr_filings['key'].unique()) == set(metadata['key'].unique()))
-    print('check-2: xbrl:', set(fr_filings['xbrl'].unique()) == set(metadata['xbrl'].unique()))
-
-    def save_errors(df_x, filename):
-        if df_x.shape[0] > 0:
-            df_x.to_csv(filename, index=False)
-            print('Saved in', os.path.dirname(filename))
-        else:
-            if os.path.exists(filename):
-                os.remove(filename)
-
-    df = metadata.loc[~metadata['outcome']]
-    print('check-3: %d json outcome errors.' % df.shape[0], end=' ')
-    save_errors(df, os.path.join(LOG_DIR, 'json_outcome_errors.csv'))
-
-    df = metadata.loc[~metadata['xbrl_outcome']]
-    print('check-4: %d xbrl outcome errors (ex -).' % df.shape[0], end=' ')
-    save_errors(df, os.path.join(LOG_DIR, 'xbrl_outcome_errors.csv'))
-    print('%d unique xbrl links (across %d symbols) have errors'
-          % (len(df['xbrl'].unique()), len(df['symbol'].unique())))
+    if args.c:
+        if args.a:
+            files = glob.glob(os.path.join(PATH_2, 'metadata_*.csv'))
+            for f in files:
+                df = pd.read_csv(f)
+                x = df.loc[~df['json_outcome']]
+                print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
+                print(f'json_errors: {x.shape[0]}, ', end='')
+                if x.shape[0] > 0:
+                    df = df[df['json_outcome']]
+                    df.to_csv(f, index=False)
+                    print(f'errors cleared, new_total = {df.shape[0]}')
+                else:
+                    print('nothing done')
+        elif args.sy is not None:
+            year = args.y if args.y is not None else datetime.today().year
+            f = os.path.join(PATH_2, f'metadata_{year}.csv')
+            df = pd.read_csv(f)
+            x = df.loc[df['symbol'] == args.sy]
+            print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
+            print(f'symbol ({args.sy}): {x.shape[0]}, ', end='')
+            if x.shape[0] > 0:
+                df = df[df['symbol'] != args.sy]
+                df.to_csv(f, index=False)
+                print(f'symbol entries cleared, new_total = {df.shape[0]}')
+            else:
+                print('nothing done')
+    else:
+        arg_parser.print_help()
