@@ -19,7 +19,7 @@ def test_nse_spot(verbose=False):
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting NseSpotPVData basics ...')
-    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCON', 'IRCTC',
+    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
                'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=False)
 
@@ -42,11 +42,11 @@ def test_nse_spot(verbose=False):
             for c in ['Open', 'High', 'Low', 'Close', 'Prev Close',
                       'Volume', 'Delivery Volume', 'No Of Trades']:
                 assert (~(abs(df1[c] - df2[c]) < 0.5)).sum() == 0, \
-                    'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
+                    '%s: Column: %s: %d' % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
 
             for c in ['Traded Value']:
                 assert (~(abs(df1[c] - df2[c]) < 100)).sum() <= 1, \
-                    'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 100)).sum())
+                    '%s: Column: %s: %d' % (symbol, c, (~(abs(df1[c] - df2[c]) < 100)).sum())
 
             if verbose:
                 print('OK', end='')

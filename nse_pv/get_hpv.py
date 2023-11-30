@@ -123,8 +123,10 @@ def process_ca(raw_pv, verbose=False):
             try:
                 mult = float(tok[2].split('/-')[0]) / float(tok[1].split('/-')[0])
             except:
-                assert False, 'ca_subject: %s' % ca_subject
-                # mult = float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+                try:
+                    mult = float(tok[2].split('Per')[0]) / float(tok[1].split('Per')[0])
+                except:
+                    assert False, 'ca_subject: [%s] [%s]' % (row['Date'], ca_subject)
             if verbose:
                 print('mult:', mult)
             xx.loc[xx.index < idx, 'mult'] = mult * xx.loc[xx.index < idx, 'mult']
@@ -165,7 +167,7 @@ def get_pv_data(symbol, after=None, from_to=None, n_days=0):
 def wrapper(symbols=None, verbose=False):
     """ Only .EQ supported right now """
     if symbols is None:
-        symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'ICICIBANK', 'IRCON', 'IRCTC',
+        symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
                    'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
     for symbol in symbols:
         raw_pv_data = get_raw_hpv_clean_raw(symbol, 2018, verbose=verbose)
