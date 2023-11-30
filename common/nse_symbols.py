@@ -14,7 +14,7 @@ PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
 PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_symbols(indices, series=None):
+def get_symbols(indices, series=None, sector=None):
     idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
     idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)].dropna().reset_index(drop=True)
     file_list = idx_list['File Name'].unique()
@@ -24,9 +24,13 @@ def get_symbols(indices, series=None):
         df = pd.read_csv(os.path.join(PATH_2, f))
         if 'Group' in df.columns:
             df.rename(columns={'Group':'Series'}, inplace=True)
-        symbols = pd.concat([symbols, df[['Series', 'Symbol']]])
+        symbols = pd.concat([symbols, df[['Series', 'Symbol', 'Industry']]])
     if series is not None:
-        symbols = symbols.loc[symbols.Series == series].reset_index(drop=True)
+        symbols = symbols.loc[symbols.Series == series]
+    if sector is not None:
+        symbols = symbols.loc[symbols.Industry == sector]
+    symbols.reset_index(drop=True, inplace=True)
+
     return list(symbols['Symbol'].unique())
 
 def get_symbol_changes(cutoff_date='2018-01-01'):
