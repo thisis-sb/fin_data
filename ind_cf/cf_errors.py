@@ -22,7 +22,7 @@ if __name__ == '__main__':
     arg_parser = ArgumentParser()
     arg_parser.add_argument("-c", action='store_true', help='clear errors')
     arg_parser.add_argument("-y", type=int, help='calendar year')
-    arg_parser.add_argument("-sy", help='nse symbol')
+    arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
     arg_parser.add_argument('-a', action='store_true', help='clear all errors flag')
     args = arg_parser.parse_args()
 
@@ -44,14 +44,21 @@ if __name__ == '__main__':
             year = args.y if args.y is not None else datetime.today().year
             f = os.path.join(PATH_2, f'metadata_{year}.csv')
             df = pd.read_csv(f)
-            x = df.loc[df['symbol'] == args.sy]
+            x = df.loc[df['symbol'].isin(args.sy)]
             print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
             print(f'symbol ({args.sy}): {x.shape[0]}, ', end='')
             if x.shape[0] > 0:
-                df = df[df['symbol'] != args.sy]
+                df = df[~df['symbol'].isin(args.sy)]
                 df.to_csv(f, index=False)
                 print(f'symbol entries cleared, new_total = {df.shape[0]}')
             else:
                 print('nothing done')
     else:
-        arg_parser.print_help()
+        print('\nShowing all errors\n')
+        files = glob.glob(os.path.join(PATH_2, 'metadata_*.csv'))
+        for f in files:
+            df = pd.read_csv(f)
+            x = df.loc[~df['json_outcome']]
+            print('%s: json_error symbols:::\n%s\n' % (os.path.basename(f), x['symbol'].unique()))
+            x = df.loc[~df['xbrl_outcome']]
+            print('%s: xbrl_error symbols:::\n%s\n' % (os.path.basename(f), x['symbol'].unique()))
