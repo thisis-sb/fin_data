@@ -269,7 +269,11 @@ def get_spot_quote(symbols, index=False):
         df = df.rename(columns={'index': 'Symbol', 'open': 'Open', 'high': 'High', 'low': 'Low',
                                 'last': 'lastPrice', 'percentChange': 'pChange'})
         df['Date'] = get_dict['timestamp'][:11]
-        df['epoch'] = str(int(datetime.strptime(get_dict['timestamp'], '%d-%b-%Y %H:%M:%S').timestamp()))
+        ''' quick fix for now '''
+        try:
+            df['epoch'] = str(int(datetime.strptime(get_dict['timestamp'], '%d-%b-%Y %H:%M:%S').timestamp()))
+        except:
+            df['epoch'] = str(int(datetime.strptime(get_dict['timestamp'], '%d-%b-%Y %H:%M').timestamp()))
         df['Close'] = None
         df['Series'] = 'IDX'
         df = df[['Symbol', 'Series', 'Date', 'epoch', 'Open', 'High', 'Low', 'Close', 'previousClose', 'lastPrice',
