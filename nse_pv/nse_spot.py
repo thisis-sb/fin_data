@@ -154,12 +154,15 @@ class NseSpotPVData:
         df = df.loc[df['Date'] == last_date].reset_index(drop=True)
         return df
 
-    def get_avg_closing_price(self, symbol, mid_point, band=5, series='EQ'):
+    def get_avg_closing_price(self, symbol, mid_point, band=5, series='EQ', index=False):
         try:
             date1 = (datetime.strptime(mid_point, '%Y-%m-%d') - timedelta(days=3*band))
             date2 = (datetime.strptime(mid_point, '%Y-%m-%d') + timedelta(days=3*band))
             from_to = [date1.strftime('%Y-%m-%d'), date2.strftime('%Y-%m-%d')]
-            pv_df = self.get_pv_data(symbol, series=series, from_to=from_to)
+            if not index:
+                pv_df = self.get_pv_data(symbol, series=series, from_to=from_to)
+            else:
+                pv_df = self.get_index_pv_data(symbol, from_to=from_to)
             pv_df = pv_df[['Date', 'Close']]
             if pv_df.shape[0] == 0:
                 raise ValueError('No PV data found')

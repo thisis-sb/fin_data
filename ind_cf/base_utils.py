@@ -79,10 +79,15 @@ def parse_xbrl_fr(xbrl_str):
         company_name = nse_symbol
 
     ''' check for balance sheet items '''
-    balance_sheet = 'Present' \
-        if df.loc[(df['context'] == 'OneI') &
-                  (df['tag'].isin(['Assets', 'Liabilities', 'Equity']))].shape[0] >= 3 \
-        else 'Absent'
+    balance_sheet = 'Absent'
+    if result_format == 'default' and \
+            df.loc[(df['context'] == 'OneI') &
+                   (df['tag'].isin(['Assets', 'Liabilities', 'Equity']))].shape[0] >= 3:
+            balance_sheet = 'Present'
+    elif result_format == 'banking' and \
+            df.loc[(df['context'] == 'OneI') &
+                   (df['tag'].isin(['Assets', 'CapitalAndLiabilities', 'Capital']))].shape[0] >= 3:
+            balance_sheet = 'Present'
 
     result = {
         'NSE Symbol': nse_symbol,
