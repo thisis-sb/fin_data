@@ -57,17 +57,20 @@ class NseCorporateActions:
 
         for idx, row in ca_df.iterrows():
             purpose = row['Purpose'].strip()
-            purpose = purpose.replace('/', ' / ')
+            purpose = purpose.replace('/', ' / ').replace('Rs', ' Rs ').replace('Re', ' Re ')
             mult    = row['MULT']
             if purpose[0:16] == 'Face Value Split':
-                tok = re.split('Rs | Re ', row['Purpose'])
+                tok = re.split('Rs | Re ', purpose)
+                # if symbol == 'NESTLEIND': print('tok:::', tok)
                 try:
-                    mult *= float(tok[1].split('/-')[0]) / float(tok[2].split('/-')[0])
+                    mult *= float(tok[1].split(' / -')[0].strip()) / \
+                            float(tok[2].split(' / -')[0].strip())
                 except:
                     try:
-                        mult *= float(tok[1].split('Per')[0]) / float(tok[2].split('Per')[0])
+                        mult *= float(tok[1].split('Per')[0].strip()) / \
+                                float(tok[2].split('Per')[0].strip())
                     except:
-                        assert False, 'purpose: [%s] [%s]' % (row['Ex Date'], purpose)
+                        assert False, '[%s] [%s] [%s]' % (row['Symbol'], row['Ex Date'], purpose)
             elif purpose[0:5] == 'Bonus':
                 tok = purpose.split()[1].split(':')
                 mult *= (float(tok[0]) + float(tok[1])) / float(tok[1])

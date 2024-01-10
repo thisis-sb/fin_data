@@ -34,7 +34,7 @@ def get_xbrl(url):
         raise ValueError('get_xbrl: code = %d, link = [%s]' % (response.status_code, url))
     return response.content
 
-def parse_xbrl_fr(xbrl_str):
+def parse_xbrl_fr(xbrl_str, corrections=None):
     df = pd.DataFrame(columns=['tag', 'context'])
     root = ElementTree.fromstring(xbrl_str)
     for item in root:
@@ -50,6 +50,11 @@ def parse_xbrl_fr(xbrl_str):
 
             idx = df[(df['tag'] == tag) & (df['context'] == context)].index[0]
             df.at[idx, 'value'] = item.text
+
+    if corrections is not None:
+        for corr in corrections:
+            df.loc[(df['tag'] == corr['tag']) & (df['context'] == corr['context']),
+                   'value'] = corr['value']
 
     def get_value(tag_value, value_if_not_found='not-found'):
         return df.loc[df['tag'] == tag_value, 'value'].values[0] \
@@ -112,7 +117,8 @@ def parse_xbrl_fr(xbrl_str):
 if __name__ == '__main__':
     urls = [
         'https://archives.nseindia.com/corporate/xbrl/INDAS_782747_4705_20102022204936_WEB.xml',
-        'https://archives.nseindia.com/corporate/xbrl/NONINDAS_82817_609834_14022022021357_WEB.xml'
+        'https://archives.nseindia.com/corporate/xbrl/NONINDAS_82817_609834_14022022021357_WEB.xml',
+        'https://nsearchives.nseindia.com/corporate/xbrl/INDAS_759407_5124_12102022203930_WEB.xml'
     ]
 
     for idx, url in enumerate(urls):
@@ -121,7 +127,21 @@ if __name__ == '__main__':
         parsed_result = parse_xbrl_fr(xbrl_data)
         [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
         parsed_result['parsed_df'].to_csv(
-            os.path.join(LOG_DIR, f'parsed_df_{idx}.csv'), index=False)
+            os.path.join(LOG_DIR, 'parsed_df_%s_%s.csv' % (idx, parsed_result['NSE Symbol'])))
         print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
         print()
+
+    ''' corrections '''
+    url = 'https://nsearchives.nseindia.com/corporate/xbrl/INDAS_759407_5124_12102022203930_WEB.xml'
+    corrs = [{'tag':'FaceValueOfEquityShareCapital', 'context':'OneD', 'value':'2'}]
+    idx = 99  # meh
+    xbrl_data = get_xbrl(url)
+    assert len(xbrl_data) > 0, 'ERROR, empty xbrl_data'
+    parsed_result = parse_xbrl_fr(xbrl_data, corrections=corrs)
+    [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
+    parsed_result['parsed_df'].to_csv(
+        os.path.join(LOG_DIR, 'parsed_df_%s_%s.csv' % (idx, parsed_result['NSE Symbol'])))
+    print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
+    print()
+
     print('All OK')

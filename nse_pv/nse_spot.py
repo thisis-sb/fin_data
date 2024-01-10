@@ -181,7 +181,7 @@ class NseSpotPVData:
                     datetime_as_string(pv_df['Date'].values[-1], unit='D'),
                     round(pv_df['Close'].mean(), 2)]
         except Exception as e:
-            raise ValueError('average_share_price: %s %s [%s]' % (symbol, mid_point, e))
+            raise ValueError('get_avg_closing_price: %s %s [%s]' % (symbol, mid_point, e))
 
     ''' get_index_pv_data -------------------------------------------------------------------- '''
     def get_index_pv_data(self, symbols, from_to):

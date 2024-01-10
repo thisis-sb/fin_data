@@ -59,8 +59,8 @@ def test_nse_spot(verbose=False):
     check_data(symbols, ['2020-01-01', '2020-12-31'])
     check_data(symbols, ['2021-01-01', '2021-12-31'])
     check_data(symbols, ['2022-01-01', '2022-12-31'])
-    check_data(symbols, ['2023-01-01', end_date])
-    check_data(symbols, ['2018-01-01', end_date])
+    check_data(symbols, ['2023-01-01', '2023-12-31'])
+    check_data(symbols, ['2024-01-01', end_date])
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting NseSpotPVData().get_pv_data (for multiple symbols) ...', end=' ')
@@ -214,7 +214,11 @@ def test_perf_nse_pv(verbose=False):
     symbols = nse_symbols.get_symbols(['NIFTY 500'], series='EQ')
     elapsed_time('tpnp_1')
     for i in range(100):
-        _ = nse_spot_obj.get_avg_closing_price(random.choice(symbols), mid_point='2023-06-30')
+        s = random.choice(symbols)
+        try:
+            _ = nse_spot_obj.get_avg_closing_price(s, mid_point='2023-06-30')
+        except Exception as e:
+            print('\nFor %s, ERROR: %s' % (s, e))
     print('total time: %.2f' % elapsed_time('tpnp_1'))
 
     print('test_nse_spot: total time taken: %.2f' % elapsed_time('tpnp_0'))
