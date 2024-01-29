@@ -11,10 +11,11 @@ import pandas as pd
 from datetime import date, datetime
 import pygeneric.http_utils as pyg_http_utils
 
+PATH_0 = CONFIG_ROOT
 PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
 PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 PATH_3 = os.path.join(DATA_ROOT, '00_common/03_nse_cf_ca')
-PATH_4 = CONFIG_ROOT
+PATH_4 = os.path.join(DATA_ROOT, '00_common/04_nse_cf_shp')
 
 ''' --------------------------------------------------------------------------------------- '''
 def symbols_and_broad_indices():
@@ -186,7 +187,7 @@ def prepare_symbols_master():
 
 def custom_indices():
     x1 = pd.read_csv(os.path.join(PATH_1, 'symbols_master.csv'))
-    x2 = pd.read_excel(os.path.join(PATH_4, '10_STOCKS_DB.xlsx'),
+    x2 = pd.read_excel(os.path.join(PATH_0, '10_STOCKS_DB.xlsx'),
                        sheet_name='WLs', skiprows=1,
                        usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
     x2 = x2[x2['WL#'].notna()]
@@ -209,7 +210,7 @@ def download_cf_ca(year):
     url = 'https://www.nseindia.com/api/corporates-corporateActions?index=equities' + \
         '&from_date=%s&to_date=%s' % (from_to[0], from_to[1])
 
-    print('Downloading %s ...' % from_to, end='')
+    print('CF_CA: Downloading %s ...' % from_to, end='')
     http_obj = pyg_http_utils.HttpDownloads()
     cf_ca_json = http_obj.http_get_json(url)
     cf_ca_df = pd.DataFrame(cf_ca_json)
@@ -237,6 +238,44 @@ def download_cf_ca(year):
         print('Done. cf_ca_df.shape:', cf_ca_df.shape)
     return
 
+def download_cf_shp(year):
+    date_today = date.today()
+    assert int(year) <= date_today.year, 'Invalid Year %s' % year
+    if int(year) == date_today.year:
+        from_to = ['01-01-%d' % int(year),'%s-%s-%d' % (('%d' % date_today.day).zfill(2),
+                                                        ('%d' % date_today.month).zfill(2),
+                                                        int(year))]
+    else:
+        from_to = ['01-01-%d' % int(year), '31-12-%d' % int(year)]
+    url = 'https://www.nseindia.com/api/corporate-share-holdings-master?index=equities' + \
+        '&from_date=%s&to_date=%s' % (from_to[0], from_to[1])
+
+    print('CF_SHP: Downloading %s ...' % from_to, end='')
+    http_obj = pyg_http_utils.HttpDownloads()
+    cf_shp_json = http_obj.http_get_json(url)
+    cf_shp_df = pd.DataFrame(cf_shp_json)
+    cf_shp_df.reset_index(drop=True, inplace=True)
+    cols = {
+        'symbol': 'symbol',
+        'name':'company_name',
+        'recordId': 'recordId',
+        'submissionDate': 'submissionDate',
+        'date': 'date',
+        'pr_and_prgrp': 'pr_and_prgrp',
+        'public_val': 'public_val',
+        'employeeTrusts': 'employeeTrusts',
+        'xbrl': 'xbrl'
+    }
+    cf_shp_df.rename(columns=cols, inplace=True)
+    cols_order = list(cols.values()) + [c for c in cf_shp_df.columns if c not in cols.values()]
+    cf_shp_df = cf_shp_df[cols_order]
+    cf_shp_df.to_csv(os.path.join(PATH_4, 'CF_SHP_%s.csv' % year), index=False)
+    if len(cf_shp_json) != cf_shp_df.shape[0]:
+        print('Warning! shapes are not matching. %d/%d' % (len(cf_shp_json), cf_shp_df.shape[0]))
+    else:
+        print('Done. cf_shp_df.shape:', cf_shp_df.shape)
+    return
+
 def last_n_pe_dates(n, last_period=None):
     end_date_str = date.today().strftime('%Y-%m-%d') if last_period is None else last_period
     pe_dates = []
@@ -248,9 +287,14 @@ def last_n_pe_dates(n, last_period=None):
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    years = None if len(sys.argv) == 1 else [int(y) for y in sys.argv[1:]]
+    from argparse import ArgumentParser
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument("-y", type=int, nargs='+', help='calendar year')
+    arg_parser.add_argument("-ca",  action='store_true', help='download cf_ca')
+    arg_parser.add_argument("-shp", action='store_true', help='download cf_shp')
+    args = arg_parser.parse_args()
 
-    if years is None:
+    if args.y is None:
         symbols_and_broad_indices()
         sectoral_indices()
         get_etf_list()
@@ -258,8 +302,14 @@ if __name__ == '__main__':
         get_misc()
         prepare_symbols_master()
         custom_indices()
+        print('Last 6 pe_dates:', last_n_pe_dates(6))
     else:
-        for year in years:
-            download_cf_ca(year)
-
-    print('Last 6 pe_dates:', last_n_pe_dates(6))
+        print('Downloading CF_CA & CF_SHP for years:', args.y)
+        if args.ca is False and args.shp is False:
+            arg_parser.print_help()
+            exit(0)
+        for year in args.y:
+            if args.ca:
+                download_cf_ca(year)
+            if args.shp:
+                download_cf_shp(year)

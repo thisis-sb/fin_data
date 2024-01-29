@@ -8,7 +8,7 @@ import datetime
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr
 from fin_data.wrap import test_all
-from fin_data.ind_cf import scrape_nse, download_fr
+from fin_data.ind_cf import scrape_nse, download_fr, download_shp
 
 ''' --------------------------------------------------------------------------------------- '''
 def e2e_nse_pv():
@@ -23,6 +23,7 @@ def e2e_nse_pv():
     nse_config.prepare_symbols_master()
     nse_config.custom_indices()
     nse_config.download_cf_ca(current_year)
+    nse_config.download_cf_shp(current_year)
     print(">>> Daily task / nse_config::: Finished\n")
 
     print("\n>>> Daily task / nse_pv.get_hpv::: Starting")
@@ -60,6 +61,11 @@ def e2e_ind_cf(year):
     mgr = download_fr.DownloadManagerNSE(year)
     mgr.download()
     print("\n>>> Task / download_fr: Finished")
+
+    print("\n>>> Task / download_shp: Starting")
+    mgr = download_shp.DownloadManagerNSE(year)
+    mgr.download()
+    print("\n>>> Task / download_shp: Finished")
 
     return
 

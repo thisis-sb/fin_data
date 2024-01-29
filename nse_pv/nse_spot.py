@@ -96,7 +96,8 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbols, series='EQ', from_to=None, get52wkhl=True, verbose=False):
+    def get_pv_data(self, symbols, series='EQ', from_to=None, adjust_for_ca=True, get52wkhl=True,
+                    verbose=False):
         if type(symbols) == str:
             df = self.pv_data.loc[self.pv_data['Symbol'] == symbols]
         elif type(symbols) == list:
@@ -112,6 +113,11 @@ class NseSpotPVData:
         else:
             df = df.loc[(df['Date'] >= datetime.strptime(from_to[0], '%Y-%m-%d')) &
                         (df['Date'] <= datetime.strptime(from_to[1], '%Y-%m-%d'))]
+
+        if not adjust_for_ca:
+            df.sort_values(by='Date', inplace=True)
+            df.reset_index(drop=True, inplace=True)
+            return df
 
         if type(symbols) == str:
             df = self.adjust_for_corporate_actions(
@@ -154,13 +160,13 @@ class NseSpotPVData:
         df = df.loc[df['Date'] == last_date].reset_index(drop=True)
         return df
 
-    def get_avg_closing_price(self, symbol, mid_point, band=5, series='EQ', index=False):
+    def get_avg_closing_price(self, symbol, mid_point, band=5, series='EQ', index=False, adjust_for_ca=True):
         try:
             date1 = (datetime.strptime(mid_point, '%Y-%m-%d') - timedelta(days=3*band))
             date2 = (datetime.strptime(mid_point, '%Y-%m-%d') + timedelta(days=3*band))
             from_to = [date1.strftime('%Y-%m-%d'), date2.strftime('%Y-%m-%d')]
             if not index:
-                pv_df = self.get_pv_data(symbol, series=series, from_to=from_to)
+                pv_df = self.get_pv_data(symbol, series=series, from_to=from_to, adjust_for_ca=adjust_for_ca)
             else:
                 pv_df = self.get_index_pv_data(symbol, from_to=from_to)
             pv_df = pv_df[['Date', 'Close']]

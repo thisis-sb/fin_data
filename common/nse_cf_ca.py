@@ -72,8 +72,16 @@ class NseCorporateActions:
                     except:
                         assert False, '[%s] [%s] [%s]' % (row['Symbol'], row['Ex Date'], purpose)
             elif purpose[0:5] == 'Bonus':
-                tok = purpose.split()[1].split(':')
-                mult *= (float(tok[0]) + float(tok[1])) / float(tok[1])
+                try:
+                    tok = purpose.split()[1].split(':')
+                    mult *= (float(tok[0].strip()) + float(tok[1].strip())) / float(tok[1].strip())
+                except:
+                    try:
+                        x = purpose.split(' ')
+                        tok = x[-1].split(':')
+                        mult *= (float(tok[0].strip()) + float(tok[1].strip())) / float(tok[1].strip())
+                    except:
+                        assert False, '[%s] [%s] [%s]' % (row['Symbol'], row['Ex Date'], purpose)
             else:
                 assert 1 == 0
             ca_df.loc[idx, 'MULT'] = mult
