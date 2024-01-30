@@ -113,14 +113,20 @@ def test_me():
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
+    from argparse import ArgumentParser
+
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('-sy', help="NSE symbol")
+    args = arg_parser.parse_args()
+
+    if args.sy is None:
         print('\nTesting %s:' % '/'.join(str(__file__).split('/')[-3:]), end=' ')
         test_me()
         print('outcome: %s, Done' % test_me())
         exit()
 
     cutoff_date = '2018-01-01'
-    symbol = sys.argv[1]
+    symbol = args.sy
     nse_ca_obj = NseCorporateActions()
     print('\nFor %s' % symbol)
     print('NseCorporateActions.get_history prettyprint:\n%s' %
