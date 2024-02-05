@@ -30,7 +30,7 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/index_bhavcopy_all.csv.parquet'))
-        md_idx = pd.read_excel(os.path.join(CONFIG_ROOT, '01_fin_data.xlsx'), sheet_name='indices')
+        md_idx = pd.read_excel(os.path.join(CONFIG_ROOT, '03_fin_data.xlsx'), sheet_name='indices')
         self.pv_data_index = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_index = pd.merge(self.pv_data_index, md_idx, on='Index Name', how='left')
         self.pv_data_index.sort_values(by=['Symbol', 'Date'], inplace=True)
@@ -44,7 +44,7 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/etf_bhavcopy_all.csv.parquet'))
-        md_etf = pd.read_excel(os.path.join(CONFIG_ROOT, '01_fin_data.xlsx'), sheet_name='nse_etf')
+        md_etf = pd.read_excel(os.path.join(CONFIG_ROOT, '03_fin_data.xlsx'), sheet_name='nse_etf')
         self.pv_data_etf = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_etf = pd.merge(self.pv_data_etf, md_etf,
                                     on=['Symbol', 'SECURITY', 'UNDERLYING'], how='left')

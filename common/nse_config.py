@@ -187,7 +187,7 @@ def prepare_symbols_master():
 
 def custom_indices():
     x1 = pd.read_csv(os.path.join(PATH_1, 'symbols_master.csv'))
-    x2 = pd.read_excel(os.path.join(PATH_0, '10_STOCKS_DB.xlsx'),
+    x2 = pd.read_excel(os.path.join(PATH_0, '01_STOCKS_DB_IN.xlsx'),
                        sheet_name='WLs', skiprows=1,
                        usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
     x2 = x2[x2['WL#'].notna()]

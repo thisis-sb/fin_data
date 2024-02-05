@@ -13,7 +13,7 @@ PATH_2 = os.path.join(DATA_ROOT, r'00_common\02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def list_indices(index_name=None):
-    idx_list = pd.read_excel(os.path.join(PATH_1, '01_fin_data.xlsx'), sheet_name='indices')\
+    idx_list = pd.read_excel(os.path.join(PATH_1, '03_fin_data.xlsx'), sheet_name='indices')\
         .dropna().reset_index(drop=True)
     result_dict = {}
     if index_name is None:
@@ -26,7 +26,7 @@ def list_indices(index_name=None):
     return result_dict
 
 def index_sectors(index_name):
-    df = pd.read_excel(os.path.join(PATH_1, '01_fin_data.xlsx'), sheet_name='indices')
+    df = pd.read_excel(os.path.join(PATH_1, '03_fin_data.xlsx'), sheet_name='indices')
     df = df.loc[df['Symbol'] == index_name]
     if df.shape[0] == 0:
         return []

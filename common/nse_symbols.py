@@ -15,7 +15,7 @@ PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_symbols(indices, series=None, sector=None):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
+    idx_list = pd.read_excel(os.path.join(PATH_0, '03_fin_data.xlsx'), sheet_name='indices')
     idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)].dropna().reset_index(drop=True)
     file_list = idx_list['File Name'].unique()
 
@@ -52,7 +52,7 @@ def get_isin(symbol):
     return 'unknown-isin' if df.shape[0] == 0 else df['ISIN'].values[0]
 
 def index_filename(code=0):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '01_fin_data.xlsx'), sheet_name='indices')
+    idx_list = pd.read_excel(os.path.join(PATH_0, '03_fin_data.xlsx'), sheet_name='indices')
     idx_list = idx_list.dropna().reset_index(drop=True)
     idx_list.reset_index(inplace=True)
     idx_list['index'] = idx_list['index'] + 1
