@@ -244,8 +244,8 @@ if __name__ == '__main__':
     arg_parser.add_argument('-v', action='store_true', help="Verbose")
     args = arg_parser.parse_args()
 
-    print('\nArgs: src: %s, year: %s, -sy: %s, md: %d, verbose: %s' %
-          (args.src, args.y, args.sy, args.md, args.v))
+    print('\nArgs: year: %s, -sy: %s, md: %d, verbose: %s' %
+          (args.y, args.sy, args.md, args.v))
 
     year = datetime.today().year if args.y is None else int(args.y)
     n_downloads = 1000 if args.md is None else args.md

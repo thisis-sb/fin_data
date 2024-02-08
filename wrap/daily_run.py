@@ -11,10 +11,9 @@ from fin_data.wrap import test_all
 from fin_data.ind_cf import scrape_nse, download_fr, download_shp
 
 ''' --------------------------------------------------------------------------------------- '''
-def e2e_nse_pv():
+def e2e_nse_common():
+    print("\n>>> Daily task / e2e_nse_common::: Starting")
     current_year = datetime.date.today().year
-
-    print("\n>>> Daily task / common_nse_config::: Starting")
     nse_config.symbols_and_broad_indices()
     nse_config.sectoral_indices()
     nse_config.get_etf_list()
@@ -24,7 +23,15 @@ def e2e_nse_pv():
     nse_config.custom_indices()
     nse_config.download_cf_ca(current_year)
     nse_config.download_cf_shp(current_year)
-    print(">>> Daily task / nse_config::: Finished\n")
+    print(">>> Daily task / e2e_nse_common::: Finished\n")
+    return
+
+def e2e_nse_pv(common_as_well=True):
+    print('Running e2e_nse_pv ...')
+    current_year = datetime.date.today().year
+
+    if common_as_well:
+        e2e_nse_common()
 
     print("\n>>> Daily task / nse_pv.get_hpv::: Starting")
     get_hpv.wrapper()
@@ -50,20 +57,24 @@ def e2e_nse_pv():
 
     return
 
-def e2e_ind_cf(year):
+def e2e_ind_cf(common_as_well=True):
     print('Running e2e_ind_cf ...')
+    current_year = datetime.date.today().year
+
+    if common_as_well:
+        e2e_nse_common()
 
     print("\n>>> Task / scrape_nse: Starting")
-    scrape_nse.get_nse_fr_filings(year)
+    scrape_nse.get_nse_fr_filings(current_year)
     print("\n>>> Task / scrape_nse: Finished")
 
     print("\n>>> Task / download_fr: Starting")
-    mgr = download_fr.DownloadManagerNSE(year)
+    mgr = download_fr.DownloadManagerNSE(current_year)
     mgr.download()
     print("\n>>> Task / download_fr: Finished")
 
     print("\n>>> Task / download_shp: Starting")
-    mgr = download_shp.DownloadManagerNSE(year)
+    mgr = download_shp.DownloadManagerNSE(current_year)
     mgr.download()
     print("\n>>> Task / download_shp: Finished")
 
@@ -74,9 +85,12 @@ if __name__ == '__main__':
     opt = None if len(sys.argv) == 1 else sys.argv[1]
 
     if opt == 'nse_pv':
-        e2e_nse_pv()
+        e2e_nse_pv(common_as_well=True)
     elif opt == 'nse_cf':
-        year = datetime.datetime.today().year
-        e2e_ind_cf(year)
+        e2e_ind_cf(common_as_well=True)
+    elif opt == 'nse_all':
+        e2e_nse_common()
+        e2e_nse_pv()
+        e2e_ind_cf()
     else:
-        print('\nERROR! Bad options. Usage: nse_pv OR nse_cf. bse_cf: Run download_fr direcly')
+        print('\nERROR! Bad options. Usage: nse_pv OR nse_cf OR nse_all')
