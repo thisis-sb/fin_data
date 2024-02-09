@@ -13,6 +13,7 @@ from fin_data.ind_cf import scrape_nse, download_fr, download_shp
 ''' --------------------------------------------------------------------------------------- '''
 def e2e_nse_common():
     print("\n>>> Daily task / e2e_nse_common::: Starting")
+    print(120 * '-')
     current_year = datetime.date.today().year
     nse_config.symbols_and_broad_indices()
     nse_config.sectoral_indices()
@@ -27,11 +28,13 @@ def e2e_nse_common():
     return
 
 def e2e_nse_pv(common_as_well=True):
-    print('Running e2e_nse_pv ...')
+    print('\nRunning e2e_nse_pv ...')
+    print(120 * '-')
     current_year = datetime.date.today().year
 
     if common_as_well:
         e2e_nse_common()
+        print(120 * '-')
 
     print("\n>>> Daily task / nse_pv.get_hpv::: Starting")
     get_hpv.wrapper()
@@ -58,11 +61,13 @@ def e2e_nse_pv(common_as_well=True):
     return
 
 def e2e_ind_cf(common_as_well=True):
-    print('Running e2e_ind_cf ...')
+    print('\nRunning e2e_ind_cf ...')
+    print(120 * '-')
     current_year = datetime.date.today().year
 
     if common_as_well:
         e2e_nse_common()
+        print(120 * '-')
 
     print("\n>>> Task / scrape_nse: Starting")
     scrape_nse.get_nse_fr_filings(current_year)
@@ -90,7 +95,7 @@ if __name__ == '__main__':
         e2e_ind_cf(common_as_well=True)
     elif opt == 'nse_all':
         e2e_nse_common()
-        e2e_nse_pv()
-        e2e_ind_cf()
+        e2e_nse_pv(common_as_well=False)
+        e2e_ind_cf(common_as_well=False)
     else:
         print('\nERROR! Bad options. Usage: nse_pv OR nse_cf OR nse_all')
