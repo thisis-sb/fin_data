@@ -346,9 +346,13 @@ def show_and_clear_errors(year, clear=False):
 
 ''' --------------------------------------------------------------------------------------- '''
 def test_integrity():
+    from pygeneric.datetime_utils import elapsed_time
+    elapsed_time("download_shp_1")
     print('\nRunning test_integrity ... ')
+
     metadata = pd.concat([pd.read_csv(f) for f in glob.glob(os.path.join(PATH_2, 'metadata_*.csv'))])
     print('metadata:', metadata.shape)
+
 
     ar_dict = {}
     for ix, row in metadata.iterrows():
@@ -360,13 +364,20 @@ def test_integrity():
             ar_dict[row['xbrl_archive_path']] = archiver.Archiver(f, mode='r')
 
         shp_data_str = ar_dict[row['xbrl_archive_path']].get(row['xbrl_link'])
+        shp_data_dict = json.loads(shp_data_str)
+        pct_sh_hlding = json.loads(row['percent_shareholding'].replace("'", "\""))
         assert len(shp_data_str) == row['shp_data_size'], \
             '%s / %s / %s: shp_data_size mismatch %d / %d' % \
             (row['symbol'], row['as_on_date'], row['recordId'], row['shp_data_size'], len(shp_data_str))
 
+        assert pct_sh_hlding == shp_data_dict['percent_shareholding'], \
+            '%s / %s / %s: percent_shareholding mismatch %s / %s' \
+            % (row['symbol'], row['as_on_date'], row['recordId'],
+               row['percent_shareholding'], shp_data_dict['percent_shareholding'])
+
         ''' to do: more checks? '''
 
-    print('--> test_integrity Completed, OK')
+    print('--> test_integrity Completed, OK. Time Used:', elapsed_time("download_shp_1"))
     return True
 
 def test_symbol_shp_data(symbol, verbose=False):
