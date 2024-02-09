@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 import fin_data.nse_pv.nse_spot as nse_spot
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
-from fin_data.ind_cf import download_shp
 from pygeneric.datetime_utils import elapsed_time, remove_timers
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -227,18 +226,10 @@ def test_perf_nse_pv(verbose=False):
 
     return
 
-def test_nse_shp():
-    print('\ntRunning est_nse_shp ...')
-    assert download_shp.test_integrity(), 'download_shp.test_integrity failed'
-    assert download_shp.test_symbol_shp_data('ASIANPAINT'), 'download_shp.download_shp failed'
-    print('\nCompleted: test_nse_shp')
-    return
-
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
     assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
-    test_nse_shp() # Right now at the start to avoid clutter
     test_nse_spot()
     test_perf_nse_pv()
 
