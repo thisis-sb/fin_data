@@ -156,7 +156,8 @@ def process_cm_reports(year, symbols=None, verbose=False):
         archive = Archiver(archive_file, mode='r', compression='zip')
         if verbose:
             print(f'{archive_file} cm_bhavcopy files: ', archive.keys())
-        df_x = pd.concat([pd.read_csv(BytesIO(archive.get(f)), compression={'method':'zip'})
+        df_x = pd.concat([pd.read_csv(BytesIO(archive.get(f)), compression={'method':'zip'},
+                                      keep_default_na=False)
                           for f in archive.keys()])
         return df_x
 
@@ -178,10 +179,10 @@ def process_cm_reports(year, symbols=None, verbose=False):
             return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
 
         cols = ['c1', 'c2', 'Symbol', 'Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
-        df_x = pd.concat([pd.concat(
-            [pd.read_csv(BytesIO(archive.get(f)), skiprows=3, names=cols, header=0),
-                                   pd.DataFrame({'Date': [report_date(f)]})],
-                                  axis=1) for f in archive.keys()], axis=0)
+        df_x = pd.concat([pd.concat([pd.read_csv(BytesIO(archive.get(f)), skiprows=3, names=cols,
+                                                 header=0, keep_default_na=False),
+                                     pd.DataFrame({'Date': [report_date(f)]})],
+                                    axis=1) for f in archive.keys()], axis=0)
         df_x.fillna(method='ffill', inplace=True)
         return df_x
 

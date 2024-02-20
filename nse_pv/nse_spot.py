@@ -115,7 +115,7 @@ class NseSpotPVData:
                         (df['Date'] <= datetime.strptime(from_to[1], '%Y-%m-%d'))]
 
         if not adjust_for_ca:
-            df.sort_values(by='Date', inplace=True)
+            df.sort_values(by=['Date', 'Series', 'Symbol'], inplace=True)
             df.reset_index(drop=True, inplace=True)
             return df
 
@@ -125,7 +125,7 @@ class NseSpotPVData:
                 ['Prev Close', 'Open', 'High', 'Low', 'Close'],
                 ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
             )
-            df.sort_values(by='Date', inplace=True)
+            df.sort_values(by=['Date', 'Series', 'Symbol'], inplace=True)
             df.reset_index(drop=True, inplace=True)
             return df
 
@@ -149,7 +149,7 @@ class NseSpotPVData:
             print(f'Done. {n_adj} adjusted')
 
         df_adj = pd.concat([x for x in adjusted_dfs])
-        df_adj.sort_values(by='Date', inplace=True)
+        df_adj.sort_values(by=['Date', 'Series', 'Symbol'], inplace=True)
         df_adj.reset_index(drop=True, inplace=True)
         return df_adj
 
