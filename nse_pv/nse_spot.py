@@ -214,9 +214,9 @@ class NseSpotPVData:
             legacy_df['Symbol'] = symbols
             legacy_df['Volume'] = legacy_df['Volume'] * 1000  # sure ??
             legacy_df.drop(columns='Adj Close', inplace=True)
-            df = pd.concat([df, legacy_df]).sort_values(by='Date')
+            df = pd.concat([df, legacy_df])
 
-        df.reset_index(drop=True, inplace=True)
+        df = df.sort_values(by=['Date', 'Symbol']).reset_index(drop=True)
         return df
 
     ''' get_etf_pv_data -------------------------------------------------------------------- '''

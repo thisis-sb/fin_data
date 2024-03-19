@@ -23,6 +23,11 @@ class NseCorporateActions:
         self.cf_data = df.reset_index(drop=True)
         if self.verbose:
             print('NseCorporateActions: cf_data', self.cf_data.shape)
+        self.cf_mult_cache = {}
+        self.status = True
+
+    def all_ok(self):
+        return self.status
 
     def get_history(self, symbol, cutoff_date='2018-01-01', prettyprint=False):
         df = self.cf_data.loc[self.cf_data['Ex Date'] >= cutoff_date]
@@ -43,7 +48,11 @@ class NseCorporateActions:
                         row['Purpose'])
             return xx
 
-    def get_cf_ca_multipliers(self, symbol, cutoff_date='2018-01-01'):
+    def get_cf_ca_multipliers(self, symbol, cutoff_date='2018-01-01', cache=True):
+        cache_key = '%s-%s' % (symbol, cutoff_date)
+        if cache and cache_key in self.cf_mult_cache.keys():
+            return self.cf_mult_cache[cache_key]
+
         ca_df = self.get_history(symbol, cutoff_date=cutoff_date)
         ca_df = ca_df.loc[ca_df['Purpose'].str.contains('^Bonus') |\
                           ca_df['Purpose'].str.contains('^Face Value Split')]
@@ -85,6 +94,8 @@ class NseCorporateActions:
             else:
                 assert 1 == 0
             ca_df.loc[idx, 'MULT'] = mult
+        if cache:
+            self.cf_mult_cache[cache_key] = ca_df[['Symbol', 'Ex Date', 'MULT', 'Purpose']]
         return ca_df[['Symbol', 'Ex Date', 'MULT', 'Purpose']]
 
 def test_me():
