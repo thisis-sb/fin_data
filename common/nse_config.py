@@ -10,6 +10,7 @@ import sys
 import pandas as pd
 from datetime import date, datetime
 import pygeneric.http_utils as pyg_http_utils
+import pygeneric.misc as pyg_misc
 
 PATH_0 = CONFIG_ROOT
 PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
@@ -18,6 +19,91 @@ PATH_3 = os.path.join(DATA_ROOT, '00_common/03_nse_cf_ca')
 PATH_4 = os.path.join(DATA_ROOT, '00_common/04_nse_cf_shp')
 
 ''' --------------------------------------------------------------------------------------- '''
+def get_all_symbols():
+    clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
+                  'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
+                  'ETF Name', 'Sr.No.', 'Instrument Type']
+    nse_config_dicts = [
+        {
+            'urls': ['https://archives.nseindia.com/content/equities/EQUITY_L.csv'],
+            'column_map': {'SYMBOL': clean_cols[0], ' ISIN NUMBER': clean_cols[1],
+                           ' SERIES': clean_cols[2], 'NAME OF COMPANY': clean_cols[3],
+                           ' PAID UP VALUE': clean_cols[5], ' FACE VALUE': clean_cols[4],
+                           ' MARKET LOT': clean_cols[6], ' DATE OF LISTING': clean_cols[7]
+                           },
+            'storage_path': PATH_1
+        },
+        {
+            'urls': [
+                'https://archives.nseindia.com/content/equities/List_of_Active_Securities_CM_DEBT.csv'
+                ],
+            'column_map': {'Sr.No.': clean_cols[11], 'ISIN': clean_cols[1],
+                           'NAME OF COMPANY': clean_cols[3], 'Instrument Type': clean_cols[12]
+                           },
+            'storage_path': PATH_1
+        }
+    ]
+    for ix in nse_config_dicts:
+        for url in ix['urls']:
+            print('Downloading', os.path.basename(url), end=' ... ')
+            df = pd.read_csv(url)
+            df.rename(columns=ix['column_map'], inplace=True)
+            df = df[list(ix['column_map'].values())]
+            df.to_csv(os.path.join(ix['storage_path'], '%s' % os.path.basename(url)), index=False)
+            print('Done, shape:', df.shape)
+    return
+
+def get_all_indices(verbose=False):
+    print('Downloading index components ...')
+    if verbose:
+        import json
+    ''' Step1: get all indices data '''
+    http_obj = pyg_http_utils.HttpDownloads(website='nse')
+    url = 'https://www.nseindia.com/api/allIndices'
+    data = http_obj.http_get_json(url)
+    assert len(data) > 0 and 'data' in data.keys() and len(data['data']) > 0, \
+        'Cannot continue (Try Later)! Empty or corrputed data: %s' % data
+    if verbose:
+        print(json.dumps(data, indent=2))
+    ''' NOTE: for NSE indices, I am using Index Name as Symbol (for harmony) '''
+    cols = {'index': 'Symbol', 'indexSymbol': 'short_symbol', 'key': 'category'}
+    idx_df = pd.DataFrame(data['data'])[list(cols.keys())]
+    idx_df.rename(columns=cols, inplace=True)
+    idx_df.reset_index(drop=True, inplace=True)
+
+    ''' Step1: get components of all indices '''
+    for ix, row in idx_df.iterrows():
+        pyg_misc.print_progress_str(ix + 1, idx_df.shape[0])
+        symbol = row['Symbol']
+        if ':' in symbol or '/' in symbol or \
+                symbol in ['INDIA VIX', 'NIFTY50 TR 2X LEV', 'NIFTY50 PR 2X LEV']:
+            continue
+        url = 'https://www.nseindia.com/api/equity-stockIndices?index=%s' % row['short_symbol']
+        url.replace(' ', '%20')
+        data = http_obj.http_get_json(url)
+        if len(data) == 0 or 'data' not in data.keys() or len(data['data']) == 0:
+            continue
+        if verbose:
+            print(json.dumps(data, indent=2))
+        x1 = [x for x in data['data'] if x['priority'] == 0]
+        x2 = [x['meta'] for x in data['data'] if 'meta' in x.keys()]
+        df1 = pd.DataFrame(x1)[['symbol', 'series', 'identifier']]
+        df2 = pd.DataFrame(x2)[['symbol', 'isin', 'companyName', 'industry']]
+        df = pd.merge(df2, df1, on='symbol', how='left')
+        df.rename(columns={'symbol':'Symbol', 'isin':'ISIN', 'series':'Series',
+                           'companyName':'Company Name', 'industry':'Industry',
+                           'identifier':'Identifier'}, inplace=True)
+        df.to_csv(os.path.join(PATH_2, '%s.csv' % symbol), index=False)
+        idx_df.loc[ix, 'file_name'] = '%s.csv' % symbol
+
+    idx_df.to_csv(os.path.join(PATH_2, 'all_nse_indices.csv'), index=False)
+    print('\nDone. %d indices, %d categories, %d indices with no symbols.'
+          % (idx_df.shape[0], len(idx_df['category'].unique()),
+             idx_df[idx_df['file_name'].isnull()].shape[0]))
+
+    return
+
+""" ------------------------------------ NOT USED ANYMORE ------------------------------------ """
 def symbols_and_broad_indices():
     clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
                   'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
@@ -72,6 +158,7 @@ def symbols_and_broad_indices():
 
     return
 
+""" ------------------------------------ NOT USED ANYMORE ------------------------------------ """
 def sectoral_indices():
     print('Downloading sectoral indices ...', end=' ')
     indices = [
@@ -163,24 +250,20 @@ def prepare_symbols_master():
     equity_l_df.rename(columns=lambda x: x.strip(), inplace=True)
     equity_l_df = equity_l_df[['Symbol', 'Company Name', 'Series', 'ISIN']]
 
-    indices = {'NIFTY 50': 'ind_nifty50list',
-               'NEXT 50': 'ind_niftynext50list',
-               'MIDCAP 150': 'ind_niftymidcap150list',
-               'SMALLCAP 250': 'ind_niftysmallcap250list',
-               'MICROCAP 250': 'ind_niftymicrocap250_list'
-               }
+    indices = ['NIFTY 50', 'NIFTY NEXT 50',
+               'NIFTY MIDCAP 150', 'NIFTY SMALLCAP 250', 'NIFTY MICROCAP 250']
     indices_master = pd.DataFrame()
-    for index_name in list(indices.keys()):
-        df = pd.read_csv(os.path.join(PATH_2, f'{indices[index_name]}.csv'))
-        df['nse_index_name'] = index_name
+    for index_name in indices:
+        df = pd.read_csv(os.path.join(PATH_2, f'{index_name}.csv'))
+        df['NSE Index'] = index_name
         if indices_master.shape[0] > 0:
             df = df[~df['ISIN'].isin(indices_master['ISIN'])]
             df.reset_index(drop=True, inplace=True)
         indices_master = pd.concat([indices_master, df])
+    indices_master.drop(columns=['Company Name'], inplace=True) # think about this
 
-    indices_master.drop(columns=['Company Name'], inplace=True)
     df = pd.merge(equity_l_df, indices_master, on=['Symbol', 'ISIN', 'Series'], how='left')
-    df['nse_index_name'] = df['nse_index_name'].fillna('xxxxx')
+    df['NSE Index'] = df['NSE Index'].fillna('xxxxx')
     df.to_csv(os.path.join(PATH_1, 'symbols_master.csv'), index=False)
     print('Done, shape:', df.shape)
     return
@@ -192,11 +275,20 @@ def custom_indices():
                        usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
     x2 = x2[x2['WL#'].notna()]
     x2['WL#'] = x2['WL#'].astype(int).astype(str)
-    x2 = x2.loc[x2['WL#'] == '1']
-    x1 = x1.loc[x1['Symbol'].isin(x2['Symbol'].unique())]
-    x1[['Symbol', 'ISIN', 'Series', 'Company Name', 'Industry']].\
-        to_csv(os.path.join(PATH_2, 'watchlist_1.csv'), index=False)
+    x2 = pd.merge(x2, x1, on=['Symbol', 'Series'], how='left')
+    x2[['Symbol', 'Series', 'ISIN', 'Company Name', 'Industry', 'WL#']].\
+        to_csv(os.path.join(PATH_2, 'all_watchlist_indices.csv'), index=False)
     return
+
+def get_all():
+    get_all_symbols()
+    get_all_indices()
+    get_etf_list()
+    get_symbol_changes()
+    get_misc()
+    prepare_symbols_master()
+    custom_indices()
+    return True
 
 def download_cf_ca(year):
     date_today = date.today()
@@ -295,8 +387,8 @@ if __name__ == '__main__':
     args = arg_parser.parse_args()
 
     if args.y is None:
-        symbols_and_broad_indices()
-        sectoral_indices()
+        get_all_symbols()
+        get_all_indices()
         get_etf_list()
         get_symbol_changes()
         get_misc()

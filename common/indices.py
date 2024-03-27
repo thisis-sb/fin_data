@@ -12,6 +12,7 @@ PATH_1 = CONFIG_ROOT
 PATH_2 = os.path.join(DATA_ROOT, r'00_common\02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
+"""
 def list_indices(index_name=None):
     idx_list = pd.read_excel(os.path.join(PATH_1, '03_fin_data.xlsx'), sheet_name='indices')\
         .dropna().reset_index(drop=True)
@@ -33,12 +34,16 @@ def index_sectors(index_name):
     index_file_name = df['File Name'].values[0]
     df = pd.read_csv(os.path.join(PATH_2, index_file_name))
     return sorted(df['Industry'].unique())
+"""
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
+    print('Not required now. Delete soon')
+    """
     idx_name = None if len(sys.argv) == 1 else sys.argv[1:]
     r = list_indices(idx_name)
     [print('\n%s :::\n%s\n' % (k, r[k].to_string(index=False))) for k in r.keys()]
     if idx_name is not None:
         print('\nIndex Sectors:::')
         [print('\n%s :::\n%s\n' % (ix, "\n".join(index_sectors(ix)))) for ix in idx_name]
+        """

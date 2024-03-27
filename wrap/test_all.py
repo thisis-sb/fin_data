@@ -7,6 +7,7 @@ from fin_data.env import *
 import os
 import random
 from datetime import datetime, timedelta
+import pandas as pd
 import fin_data.nse_pv.nse_spot as nse_spot
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
@@ -41,12 +42,14 @@ def test_nse_spot(verbose=False):
                 df2 = df2.loc[df2['Date'].isin(common_dates)].reset_index(drop=True)
             for c in ['Open', 'High', 'Low', 'Close', 'Prev Close',
                       'Volume', 'Delivery Volume', 'No Of Trades']:
-                assert (~(abs(df1[c] - df2[c]) < 0.5)).sum() == 0, \
-                    '%s: Column: %s: %d' % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
+                assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum() == 0, \
+                    '%s: Column: %s: %d' %\
+                    (symbol, c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum())
 
             for c in ['Traded Value']:
-                assert (~(abs(df1[c] - df2[c]) < 100)).sum() <= 1, \
-                    '%s: Column: %s: %d' % (symbol, c, (~(abs(df1[c] - df2[c]) < 100)).sum())
+                assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum() <= 1, \
+                    '%s: Column: %s: %d' %\
+                    (symbol, c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum())
 
             if verbose:
                 print('OK', end='')
@@ -81,12 +84,12 @@ def test_nse_spot(verbose=False):
 
         for c in ['Open', 'High', 'Low', 'Close', 'Prev Close',
                   'Volume', 'Delivery Volume', 'No Of Trades']:
-            assert (~(abs(df1[c] - df2[c]) < 0.5)).sum() == 0, \
-                'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
+            assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum() == 0, \
+                'Column: %s: %d' % (c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum())
 
         for c in ['Traded Value']:
-            assert (~(abs(df1[c] - df2[c]) < 100)).sum() <= 1, \
-                'Column: %s: %d' % (c, (~(abs(df1[c] - df2[c]) < 100)).sum())
+            assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum() <= 1, \
+                'Column: %s: %d' % (c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum())
 
         if verbose:
             print('OK', end='')
@@ -95,14 +98,14 @@ def test_nse_spot(verbose=False):
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting get_index_pv_data ... ', end='')
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', '2023-05-02'])
-    assert pv_data.shape[0] == 18 and pv_data.shape[1] == 15
+    assert pv_data.shape[0] == 18 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', None])
-    assert pv_data.shape[0] > 0 and pv_data.shape[1] == 15
+    assert pv_data.shape[0] > 0 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data(['NIFTY 50', 'NIFTY MIDCAP 150', 'NIFTY IT'],
                                              ['2023-04-01', '2023-05-02'])
-    assert pv_data.shape[0] == 54 and pv_data.shape[1] == 15
+    assert pv_data.shape[0] == 54 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31'])
-    assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 15
+    assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 13
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''

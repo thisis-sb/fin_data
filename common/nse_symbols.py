@@ -9,21 +9,18 @@ import sys
 import glob
 import pandas as pd
 
-PATH_0 = CONFIG_ROOT
 PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
 PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_symbols(indices, series=None, sector=None):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '03_fin_data.xlsx'), sheet_name='indices')
-    idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)].dropna().reset_index(drop=True)
-    file_list = idx_list['File Name'].unique()
+    idx_list = pd.read_csv(os.path.join(PATH_2, 'all_nse_indices.csv'))
+    idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)]
+    file_list = idx_list['file_name'].unique()
 
     symbols = pd.DataFrame()
     for f in file_list:
         df = pd.read_csv(os.path.join(PATH_2, f))
-        if 'Group' in df.columns:
-            df.rename(columns={'Group':'Series'}, inplace=True)
         symbols = pd.concat([symbols, df[['Series', 'Symbol', 'Industry']]])
     if series is not None:
         symbols = symbols.loc[symbols.Series == series]
@@ -51,14 +48,7 @@ def get_isin(symbol):
     df = df.loc[df['Symbol'] == symbol].reset_index(drop=True)
     return 'unknown-isin' if df.shape[0] == 0 else df['ISIN'].values[0]
 
-def index_filename(code=0):
-    idx_list = pd.read_excel(os.path.join(PATH_0, '03_fin_data.xlsx'), sheet_name='indices')
-    idx_list = idx_list.dropna().reset_index(drop=True)
-    idx_list.reset_index(inplace=True)
-    idx_list['index'] = idx_list['index'] + 1
-    idx_map = dict(zip(idx_list['index'], idx_list['Symbol']))
-    return idx_map if code == 0 else idx_map[code]
-
+''' --------------------------------------------------------------------------------------- '''
 def test_me():
     print('\nTesting nse_symbols ... ')
 
@@ -102,9 +92,3 @@ def test_me():
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     test_me()
-
-    idxs = index_filename(0)
-    print('\nAll indices with codes:')
-    print('\n'.join(['%2s    %s' % (c, idxs[c]) for c in idxs.keys()]))
-
-    assert (index_filename(1) == 'NIFTY 50') and (index_filename(20) == 'NIFTY HEALTHCARE')

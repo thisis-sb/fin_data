@@ -14,6 +14,8 @@ import fin_data.common.nse_cf_ca as nse_cf_ca
 import fin_data.common.nse_symbols as nse_symbols
 import pygeneric.http_utils as http_utils
 
+PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
+
 ''' ------------------------------------------------------------------------------------------ '''
 class NseSpotPVData:
     def __init__(self, verbose=False):
@@ -30,9 +32,10 @@ class NseSpotPVData:
 
         data_files = glob.glob(os.path.join(self.data_path,
                                             'processed/**/index_bhavcopy_all.csv.parquet'))
-        md_idx = pd.read_excel(os.path.join(CONFIG_ROOT, '03_fin_data.xlsx'), sheet_name='indices')
         self.pv_data_index = pd.concat([pd.read_parquet(f) for f in data_files])
-        self.pv_data_index = pd.merge(self.pv_data_index, md_idx, on='Index Name', how='left')
+        self.pv_data_index['Symbol'] = self.pv_data_index['Index Name'].apply(lambda x: x.upper())
+        self.pv_data_index.insert(0, 'Symbol', self.pv_data_index.pop('Symbol'))
+        # self.pv_data_index.insert(0, 'Index Name', self.pv_data_index.pop('Index Name'))
         self.pv_data_index.sort_values(by=['Symbol', 'Date'], inplace=True)
         self.pv_data_index.reset_index(drop=True, inplace=True)
         if verbose:
