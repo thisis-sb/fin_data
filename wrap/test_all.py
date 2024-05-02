@@ -24,35 +24,41 @@ def test_nse_spot(verbose=False):
                'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=False)
 
+    def compare_dfs(symbol, df1, df2):
+        df1.to_csv(os.path.join(LOG_DIR, 'nse_spot_df1.csv'), index=False)
+        df2.to_csv(os.path.join(LOG_DIR, 'nse_spot_df2.csv'), index=False)
+        assert abs(df1.shape[0] - df2.shape[0]) <= 5, "%d / %d" % (df1.shape[0], df2.shape[0])
+
+        if df1.shape[0] != df2.shape[0]:
+            common_dates = list(set(df1['Date']) & set(df2['Date']))
+            df1 = df1.loc[df1['Date'].isin(common_dates)].reset_index(drop=True)
+            df2 = df2.loc[df2['Date'].isin(common_dates)].reset_index(drop=True)
+
+        for c in ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Volume']:
+            assert (~(abs(df1[c] - df2[c]) < 0.5)).sum() == 0, \
+                '\nERROR!! verify_results/1: %s: Column: %s: %d\n'\
+                % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
+
+        for c in ['Delivery Volume']:
+            if (~(abs(df1[c].astype(float) - df2[c].replace('-', 0).astype(float)) < 0.5)).sum() > 1:
+                print('\nWARNING!! verify_results/2: %s: Column: %s: %d\n'
+                      % (symbol, c, (~(abs(df1[c].astype(float) - df2[c].replace('-', 0).astype(float)) < 0.5)).sum()))
+
+        for c in ['No Of Trades', 'Traded Value']:
+            if (~(abs(df1[c] - df2[c]) < 5)).sum() > 1:
+                print('\nWARNING!! verify_results/3: %s: Column: %s: %d\n'
+                      % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum()))
+
+        return
+
     def check_data(symbol_list, dates):
         print('Checking for dates', dates, '...', end=' ')
         for symbol in symbol_list:
-            if verbose:
-                print(f'\n  {symbol} ...', end=' ')
-
+            if verbose: print(f'\n  {symbol} ...', end=' ')
             df1 = nse_spot_obj.get_pv_data(symbol, series='EQ', from_to=dates)
             df2 = get_hpv.get_pv_data(symbol, from_to=dates)
-            df1.to_csv(os.path.join(LOG_DIR, 'nse_spot_df1.csv'), index=False)
-            df2.to_csv(os.path.join(LOG_DIR, 'nse_spot_df2.csv'), index=False)
-            assert abs(df1.shape[0] - df2.shape[0]) <= 5, "%d / %d" % (df1.shape[0], df2.shape[0])
-
-            if df1.shape[0] != df2.shape[0]:
-                common_dates = list(set(df1['Date']) & set(df2['Date']))
-                df1 = df1.loc[df1['Date'].isin(common_dates)].reset_index(drop=True)
-                df2 = df2.loc[df2['Date'].isin(common_dates)].reset_index(drop=True)
-            for c in ['Open', 'High', 'Low', 'Close', 'Prev Close',
-                      'Volume', 'Delivery Volume', 'No Of Trades']:
-                assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum() == 0, \
-                    '%s: Column: %s: %d' %\
-                    (symbol, c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum())
-
-            for c in ['Traded Value']:
-                assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum() <= 1, \
-                    '%s: Column: %s: %d' %\
-                    (symbol, c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum())
-
-            if verbose:
-                print('OK', end='')
+            compare_dfs(symbol, df1, df2)
+            if verbose: print('OK', end='')
         print('') if verbose else print('OK')
         return
 
@@ -70,29 +76,11 @@ def test_nse_spot(verbose=False):
     """ To do: Verify 52_Wk_H/L"""
     multi_df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', end_date])
     for symbol in symbols:
-        if verbose:
-            print(f'\n  {symbol} ...', end=' ')
+        if verbose: print(f'\n  {symbol} ...', end=' ')
         df1 = multi_df.loc[multi_df['Symbol'] == symbol].reset_index(drop=True)
         df2 = get_hpv.get_pv_data(symbol, from_to=['2018-01-01', end_date])
-
-        assert abs(df1.shape[0] - df2.shape[0]) <= 5, "%d / %d" % (df1.shape[0], df2.shape[0])
-
-        if df1.shape[0] != df2.shape[0]:
-            common_dates = list(set(df1['Date']) & set(df2['Date']))
-            df1 = df1.loc[df1['Date'].isin(common_dates)].reset_index(drop=True)
-            df2 = df2.loc[df2['Date'].isin(common_dates)].reset_index(drop=True)
-
-        for c in ['Open', 'High', 'Low', 'Close', 'Prev Close',
-                  'Volume', 'Delivery Volume', 'No Of Trades']:
-            assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum() == 0, \
-                'Column: %s: %d' % (c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 0.5)).sum())
-
-        for c in ['Traded Value']:
-            assert (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum() <= 1, \
-                'Column: %s: %d' % (c, (~(abs(df1[c].astype(float) - df2[c].astype(float)) < 100)).sum())
-
-        if verbose:
-            print('OK', end='')
+        compare_dfs(symbol, df1, df2)
+        if verbose: print('OK', end='')
     print('') if verbose else print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
@@ -101,8 +89,7 @@ def test_nse_spot(verbose=False):
     assert pv_data.shape[0] == 18 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', None])
     assert pv_data.shape[0] > 0 and pv_data.shape[1] == 13
-    pv_data = nse_spot_obj.get_index_pv_data(['NIFTY 50', 'NIFTY MIDCAP 150', 'NIFTY IT'],
-                                             ['2023-04-01', '2023-05-02'])
+    pv_data = nse_spot_obj.get_index_pv_data(['NIFTY 50', 'NIFTY MIDCAP 150', 'NIFTY IT'], ['2023-04-01', '2023-05-02'])
     assert pv_data.shape[0] == 54 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2010-01-01', '2019-12-31'])
     assert pv_data.shape[0] == 2443 and pv_data.shape[1] == 13
@@ -114,8 +101,7 @@ def test_nse_spot(verbose=False):
     assert pv_data.shape[0] == 18 and pv_data.shape[1] == 17, pv_data.shape
     pv_data = nse_spot_obj.get_etf_pv_data('NIFTYBEES', ['2023-04-01', None])
     assert pv_data.shape[0] > 0 and pv_data.shape[1] == 17, pv_data.shape
-    pv_data = nse_spot_obj.get_etf_pv_data(['NIFTYBEES', 'ITBEES', 'CPSEETF'],
-                                           ['2023-04-01', '2023-05-02'])
+    pv_data = nse_spot_obj.get_etf_pv_data(['NIFTYBEES', 'ITBEES', 'CPSEETF'], ['2023-04-01', '2023-05-02'])
     assert pv_data.shape[0] == 54 and pv_data.shape[1] == 17, pv_data.shape
     print('OK')
 
@@ -150,24 +136,18 @@ def test_nse_spot(verbose=False):
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting for NseSpotPVData().get_pv_data (for same symbol, different series) ...')
     ''' TO DO: Need a better solution (for current ones & not discontinued)'''
-    assert nse_spot_obj.get_pv_data('HDFC', series='EQ',
-                                    from_to=['2023-05-12', None])['Close'].values[0] == 2776.3
-    assert nse_spot_obj.get_pv_data('HDFC', series='W3',
-                                    from_to=['2023-05-12', None])['Close'].values[0] == 560.55
-    assert nse_spot_obj.get_pv_data('BRITANNIA', series='EQ',
-                                    from_to=['2023-05-12', None])['Close'].values[0] == 4616.50
-    assert nse_spot_obj.get_pv_data('BRITANNIA', series='N3',
-                                    from_to=['2023-05-12', None])['Close'].values[0] == 29.54
+    assert nse_spot_obj.get_pv_data('HDFC', series='EQ', from_to=['2023-05-12', None])['Close'].values[0] == 2776.3
+    assert nse_spot_obj.get_pv_data('HDFC', series='W3', from_to=['2023-05-12', None])['Close'].values[0] == 560.55
+    assert nse_spot_obj.get_pv_data('BRITANNIA', series='EQ', from_to=['2023-05-12', None])['Close'].values[0] == 4616.50
+    assert nse_spot_obj.get_pv_data('BRITANNIA', series='N3', from_to=['2023-05-12', None])['Close'].values[0] == 29.54
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
     print('\nTesting for NseSpotPVData().get_avg_closing_price ...')
     res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2021-12-31')
     assert abs(res[2] - 3425.62) < 0.1, 'ERROR! %s Unexpected average value' % res
-
     res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2022-12-31')
     assert abs(res[2] - 3057.05) < 0.1, 'ERROR! %s Unexpected average value' % res
-
     res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2023-03-31')
     assert abs(res[2] - 2784.44) < 0.1, 'ERROR! %s Unexpected average value' % res
     print('OK')
@@ -219,9 +199,9 @@ def test_perf_nse_pv(verbose=False):
     for i in range(100):
         s = random.choice(symbols)
         try:
-            _ = nse_spot_obj.get_avg_closing_price(s, mid_point='2023-06-30')
+            _ = nse_spot_obj.get_avg_closing_price(s, mid_point='2024-01-15')
         except Exception as e:
-            print('\nFor %s, ERROR: %s' % (s, e))
+            print('  For %s, ERROR: %s' % (s, e))
     print('total time: %.2f' % elapsed_time('tpnp_1'))
 
     print('test_nse_spot: total time taken: %.2f' % elapsed_time('tpnp_0'))

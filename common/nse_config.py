@@ -72,27 +72,31 @@ def get_all_indices(verbose=False):
     idx_df.reset_index(drop=True, inplace=True)
 
     ''' Step1: get components of all indices '''
+    broad_indices = get_broad_indices()
     for ix, row in idx_df.iterrows():
         pyg_misc.print_progress_str(ix + 1, idx_df.shape[0])
         symbol = row['Symbol']
         if ':' in symbol or '/' in symbol or \
                 symbol in ['INDIA VIX', 'NIFTY50 TR 2X LEV', 'NIFTY50 PR 2X LEV']:
             continue
-        url = 'https://www.nseindia.com/api/equity-stockIndices?index=%s' % row['short_symbol']
-        url.replace(' ', '%20')
-        data = http_obj.http_get_json(url)
-        if len(data) == 0 or 'data' not in data.keys() or len(data['data']) == 0:
-            continue
-        if verbose:
-            print(json.dumps(data, indent=2))
-        x1 = [x for x in data['data'] if x['priority'] == 0]
-        x2 = [x['meta'] for x in data['data'] if 'meta' in x.keys()]
-        df1 = pd.DataFrame(x1)[['symbol', 'series', 'identifier']]
-        df2 = pd.DataFrame(x2)[['symbol', 'isin', 'companyName', 'industry']]
-        df = pd.merge(df2, df1, on='symbol', how='left')
-        df.rename(columns={'symbol':'Symbol', 'isin':'ISIN', 'series':'Series',
-                           'companyName':'Company Name', 'industry':'Industry',
-                           'identifier':'Identifier'}, inplace=True)
+        if symbol in broad_indices.keys():
+            df = broad_indices[symbol]
+        else:
+            url = 'https://www.nseindia.com/api/equity-stockIndices?index=%s' % row['short_symbol']
+            url.replace(' ', '%20')
+            data = http_obj.http_get_json(url)
+            if len(data) == 0 or 'data' not in data.keys() or len(data['data']) == 0:
+                continue
+            if verbose:
+                print(json.dumps(data, indent=2))
+            x1 = [x for x in data['data'] if x['priority'] == 0]
+            x2 = [x['meta'] for x in data['data'] if 'meta' in x.keys()]
+            df1 = pd.DataFrame(x1)[['symbol', 'series', 'identifier']]
+            df2 = pd.DataFrame(x2)[['symbol', 'isin', 'companyName', 'industry']]
+            df = pd.merge(df2, df1, on='symbol', how='left')
+            df.rename(columns={'symbol':'Symbol', 'isin':'ISIN', 'series':'Series',
+                               'companyName':'Company Name', 'industry':'Industry',
+                               'identifier':'Identifier'}, inplace=True)
         df.to_csv(os.path.join(PATH_2, '%s.csv' % symbol), index=False)
         idx_df.loc[ix, 'file_name'] = '%s.csv' % symbol
 
@@ -103,32 +107,15 @@ def get_all_indices(verbose=False):
 
     return
 
-""" ------------------------------------ NOT USED ANYMORE ------------------------------------ """
-def symbols_and_broad_indices():
+def get_broad_indices():
     clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
                   'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
                   'ETF Name', 'Sr.No.', 'Instrument Type']
     nse_config_dicts = [
         {
-            'urls': ['https://archives.nseindia.com/content/equities/EQUITY_L.csv'
-                     ],
-            'column_map': {'SYMBOL': clean_cols[0], ' ISIN NUMBER': clean_cols[1],
-                           ' SERIES': clean_cols[2], 'NAME OF COMPANY': clean_cols[3],
-                           ' PAID UP VALUE': clean_cols[5], ' FACE VALUE': clean_cols[4],
-                           ' MARKET LOT': clean_cols[6], ' DATE OF LISTING': clean_cols[7]
-                           },
-            'storage_path': PATH_1
-        },
-        {
-            'urls': [
-                'https://archives.nseindia.com/content/equities/List_of_Active_Securities_CM_DEBT.csv'
-                ],
-            'column_map': {'Sr.No.': clean_cols[11], 'ISIN': clean_cols[1],
-                           'NAME OF COMPANY': clean_cols[3], 'Instrument Type': clean_cols[12]
-                           },
-            'storage_path': PATH_1
-        },
-        {
+            'symbols': ['NIFTY 50', 'NIFTY NEXT 50', 'NIFTY 100', 'NIFTY 200',
+                        'NIFTY MIDCAP 150', 'NIFTY SMALLCAP 250', 'NIFTY 500',
+                        'NIFTY MICROCAP 250', 'NIFTY TOTAL MARKET'],
             'urls': ['https://archives.nseindia.com/content/indices/ind_nifty50list.csv',
                      'https://archives.nseindia.com/content/indices/ind_niftynext50list.csv',
                      'https://archives.nseindia.com/content/indices/ind_nifty100list.csv',
@@ -147,18 +134,21 @@ def symbols_and_broad_indices():
         }
     ]
 
+    results = {}
     for ix in nse_config_dicts:
-        for url in ix['urls']:
-            print('Downloading', os.path.basename(url), end=' ... ')
+        for i, symbol in enumerate(ix['symbols']):
+            url = ix['urls'][i]
+            print('Downloading %s: %s' % (symbol, os.path.basename(url)) , end=' ... ')
             df = pd.read_csv(url)
             df.rename(columns=ix['column_map'], inplace=True)
             df = df[list(ix['column_map'].values())]
-            df.to_csv(os.path.join(ix['storage_path'], '%s' % os.path.basename(url)), index=False)
+            f = '%s.csv' % symbol
+            results[symbol] = df
             print('Done, shape:', df.shape)
 
-    return
+    return results
 
-""" ------------------------------------ NOT USED ANYMORE ------------------------------------ """
+''' Not used anymore. Keep for now '''
 def sectoral_indices():
     print('Downloading sectoral indices ...', end=' ')
     indices = [
@@ -280,16 +270,6 @@ def custom_indices():
         to_csv(os.path.join(PATH_2, 'all_watchlist_indices.csv'), index=False)
     return
 
-def get_all():
-    get_all_symbols()
-    get_all_indices()
-    get_etf_list()
-    get_symbol_changes()
-    get_misc()
-    prepare_symbols_master()
-    custom_indices()
-    return True
-
 def download_cf_ca(year):
     date_today = date.today()
     assert int(year) <= date_today.year, 'Invalid Year %s' % year
@@ -377,6 +357,16 @@ def last_n_pe_dates(n, last_period=None):
                 pe_dates.append(dt)
     return pe_dates[-n:]
 
+def get_all(full=False, verbose=False):
+    get_all_symbols()
+    if full: get_all_indices()
+    if full: get_etf_list()
+    get_symbol_changes()
+    if full: get_misc()
+    if full: prepare_symbols_master()
+    if full: custom_indices()
+    return True
+
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -384,16 +374,11 @@ if __name__ == '__main__':
     arg_parser.add_argument("-y", type=int, nargs='+', help='calendar year')
     arg_parser.add_argument("-ca",  action='store_true', help='download cf_ca')
     arg_parser.add_argument("-shp", action='store_true', help='download cf_shp')
+    arg_parser.add_argument("f", action='store_true', help='get full config set')
     args = arg_parser.parse_args()
 
     if args.y is None:
-        get_all_symbols()
-        get_all_indices()
-        get_etf_list()
-        get_symbol_changes()
-        get_misc()
-        prepare_symbols_master()
-        custom_indices()
+        get_all(full=args.f)
         print('Last 6 pe_dates:', last_n_pe_dates(6))
     else:
         print('Downloading CF_CA & CF_SHP for years:', args.y)

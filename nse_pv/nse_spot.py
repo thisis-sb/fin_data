@@ -30,12 +30,10 @@ class NseSpotPVData:
             print('%d symbols, %d market days' % (len(self.pv_data['Symbol'].unique()),
                                                   len(self.pv_data['Date'].unique())))
 
-        data_files = glob.glob(os.path.join(self.data_path,
-                                            'processed/**/index_bhavcopy_all.csv.parquet'))
+        data_files = glob.glob(os.path.join(self.data_path, 'processed/**/index_bhavcopy_all.csv.parquet'))
         self.pv_data_index = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_index['Symbol'] = self.pv_data_index['Index Name'].apply(lambda x: x.upper())
         self.pv_data_index.insert(0, 'Symbol', self.pv_data_index.pop('Symbol'))
-        # self.pv_data_index.insert(0, 'Index Name', self.pv_data_index.pop('Index Name'))
         self.pv_data_index.sort_values(by=['Symbol', 'Date'], inplace=True)
         self.pv_data_index.reset_index(drop=True, inplace=True)
         if verbose:
@@ -45,8 +43,7 @@ class NseSpotPVData:
                    len(self.pv_data_index['Symbol'].unique()),
                    len(self.pv_data_index['Date'].unique())))
 
-        data_files = glob.glob(os.path.join(self.data_path,
-                                            'processed/**/etf_bhavcopy_all.csv.parquet'))
+        data_files = glob.glob(os.path.join(self.data_path, 'processed/**/etf_bhavcopy_all.csv.parquet'))
         md_etf = pd.read_excel(os.path.join(CONFIG_ROOT, '03_fin_data.xlsx'), sheet_name='nse_etf')
         self.pv_data_etf = pd.concat([pd.read_parquet(f) for f in data_files])
         self.pv_data_etf = pd.merge(self.pv_data_etf, md_etf,
@@ -56,8 +53,7 @@ class NseSpotPVData:
         if verbose:
             print('pv_data_etf shape:', self.pv_data_etf.shape, end=', ')
             print('%d etfs symbols, %d market days' %
-                  (len(self.pv_data_etf['Symbol'].unique()),
-                   len(self.pv_data_etf['Date'].unique())))
+                  (len(self.pv_data_etf['Symbol'].unique()), len(self.pv_data_etf['Date'].unique())))
             self.pv_data_etf.to_csv(os.path.join(LOG_DIR, 'df.csv'))
 
         self.nse_ca_obj = nse_cf_ca.NseCorporateActions(verbose=verbose)
@@ -84,13 +80,6 @@ class NseSpotPVData:
         return df
 
     def adjust_for_corporate_actions(self, symbol, df_raw, cols1, cols2):
-        def adj(df_row, date_idx, mult):
-            for col in cols1:
-                df_row[col] = df_row[col] / mult if df_row['idx'] < date_idx else df_row[col]
-            for col in cols2:
-                df_row[col] = df_row[col] * mult if df_row['idx'] < date_idx else df_row[col]
-            return df_row
-
         symbol_cfca = self.nse_ca_obj.get_cf_ca_multipliers(symbol)
         for idx, cfca_row in symbol_cfca.iterrows():
             for col in cols1:
@@ -99,8 +88,7 @@ class NseSpotPVData:
 
         return df_raw
 
-    def get_pv_data(self, symbols, series='EQ', from_to=None, adjust_for_ca=True, get52wkhl=True,
-                    verbose=False):
+    def get_pv_data(self, symbols, series='EQ', from_to=None, adjust_for_ca=True, get52wkhl=True, verbose=False):
         if type(symbols) == str:
             df = self.pv_data.loc[self.pv_data['Symbol'] == symbols]
         elif type(symbols) == list:

@@ -11,24 +11,20 @@ from fin_data.wrap import test_all
 from fin_data.ind_cf import scrape_nse, download_fr
 
 ''' --------------------------------------------------------------------------------------- '''
-def e2e_nse_common():
+def e2e_nse_common(full):
     print("\n>>> Daily task / e2e_nse_common::: Starting")
     print(120 * '-')
     current_year = datetime.date.today().year
-    assert nse_config.get_all()
+    assert nse_config.get_all(full=full)
     nse_config.download_cf_ca(current_year)
-    nse_config.download_cf_shp(current_year)
     print(">>> Daily task / e2e_nse_common::: Finished\n")
     return
 
 def e2e_nse_pv(common_as_well=True):
     print('\nRunning e2e_nse_pv ...')
     print(120 * '-')
-    current_year = datetime.date.today().year
 
-    if common_as_well:
-        e2e_nse_common()
-        print(120 * '-')
+    current_year = datetime.date.today().year
 
     print("\n>>> Daily task / nse_pv.get_hpv::: Starting")
     get_hpv.wrapper()
@@ -54,14 +50,11 @@ def e2e_nse_pv(common_as_well=True):
 
     return
 
-def e2e_ind_cf(common_as_well=True):
+def e2e_ind_cf():
     print('\nRunning e2e_ind_cf ...')
     print(120 * '-')
-    current_year = datetime.date.today().year
 
-    if common_as_well:
-        e2e_nse_common()
-        print(120 * '-')
+    current_year = datetime.date.today().year
 
     print("\n>>> Task / scrape_nse: Starting")
     scrape_nse.get_nse_fr_filings(current_year)
@@ -79,12 +72,14 @@ if __name__ == '__main__':
     opt = None if len(sys.argv) == 1 else sys.argv[1]
 
     if opt == 'nse_pv':
-        e2e_nse_pv(common_as_well=True)
+        e2e_nse_common(full=False)
+        e2e_nse_pv()
     elif opt == 'nse_cf':
-        e2e_ind_cf(common_as_well=True)
-    elif opt == 'nse_all':
-        e2e_nse_common()
-        e2e_nse_pv(common_as_well=False)
-        e2e_ind_cf(common_as_well=False)
+        e2e_nse_common(full=False)
+        e2e_ind_cf()
+    elif opt == 'all':
+        nse_config.get_all(full=True)
+        e2e_nse_pv()
+        e2e_ind_cf()
     else:
-        print('\nERROR! Bad options. Usage: nse_pv OR nse_cf OR nse_all')
+        print('\nERROR! Bad options. Usage: nse_pv | nse_cf | all')
