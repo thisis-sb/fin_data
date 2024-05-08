@@ -250,116 +250,60 @@ def process_cm_reports(year, symbols=None, verbose=False):
     return
 
 ''' --------------------------------------------------------------------------------------- '''
-# FO processing: TO DO
-"""def read_raw_files(path_regex, n_days=0, dr_type=None, verbose=False):
-    csv_files = glob.glob(path_regex)
+# New, still wip (subject to appl use cases)
+def process_fo_reports(year, verbose=False):
+    elapsed_time([0, 1])
 
-    n_files = n_days if 0 < n_days < len(csv_files) else len(csv_files)
+    archive_files = glob.glob(os.path.join(PATH_1, f'{year}/**/fo_bhavcopy.zip'))
     if verbose:
-        print(f'Loading {n_files} / {len(csv_files)} raw files ... ', end='')
-
-    if dr_type == 'MTO':
-        def report_date(f):
-            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
-            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
-
-        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
-        df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
-                                   pd.DataFrame({'Date': [report_date(f)]})],
-                                  axis=1) for f in csv_files[-n_files:]], axis=0)
-        df.fillna(method='ffill', inplace=True)
-    else:
-        df = pd.concat([pd.read_csv(f) for f in csv_files[-n_files:]], axis=0)
-    df = df[[col for col in df.columns if 'Unnamed' not in col]]
-    if verbose: print('Done, shape:', df.shape)
-
-    return df"""
-
-"""def read_archive(path_regex, dr_type=None, verbose=False):
-    archive_files = glob.glob(path_regex)
-    if verbose:
-        print('archive_files:')
+        print(len(archive_files), 'fo_bhavcopy files:')
         print(archive_files)
-        print(f'\nLoading {len(archive_files)} archives ... ', end='')
-    archives = [Archiver(f, mode='r', compression='zip') for f in archive_files]
 
-    if dr_type is None:
-        df = pd.concat([pd.read_csv(BytesIO(a.get(f))) for a in archives for f in a.keys()], axis=0)
-    elif dr_type == 'MTO':
-        def report_date(f):
-            dt = f.split('\\')[-1].split('.')[0].split('_')[-1]
-            return datetime.date(year=int(dt[4:]), month=int(dt[2:4]), day=int(dt[0:2]))
+    def read_fo_bhavcopy_files(archive_file, verbose=False):
+        archive = Archiver(archive_file, mode='r', compression='zip')
+        if verbose:
+            print(f'{archive_file} fo_bhavcopy files: ', archive.keys())
+        df_x = pd.concat([pd.read_csv(BytesIO(archive.get(f)), compression={'method': 'zip'},
+                                      keep_default_na=False)
+                          for f in archive.keys()])
+        return df_x
 
-        cols = ['c1', 'c2', 'Symbol','Series', 'Volume_MTO', 'Delivery Volume', 'Delivery Volume %']
-        '''df = pd.concat([pd.concat([pd.read_csv(f, skiprows=3, names=cols, header=0),
-                                   pd.DataFrame({'Date': [report_date(f)]})],
-                                  axis=1) for f in csv_files[-n_files:]], axis=0)
-        df.fillna(method='ffill', inplace=True)'''
-        df = pd.DataFrame()
-    else:
-        df = pd.DataFrame()
-
+    df = pd.concat([read_fo_bhavcopy_files(f, verbose) for f in archive_files], axis=0)
     df = df[[col for col in df.columns if 'Unnamed' not in col]]
-    if verbose:
-        print('Done, shape:', df.shape)
 
-    return df"""
+    print('  time check (load files):', elapsed_time(1), 'seconds')
 
-"""
-def process_fao_bhavcopy(year, symbols=None, n_days=0, verbose=False):
-    common.utils.time_since_last(0); common.utils.time_since_last(1)
+    cols_dict = {'INSTRUMENT':'instrument', 'SYMBOL':'symbol', 'EXPIRY_DT':'expiry_date',
+                 'STRIKE_PR':'strike_price', 'OPTION_TYP':'option_type',
+                 'OPEN':'open', 'HIGH':'high', 'LOW':'low', 'CLOSE':'close',
+                 'SETTLE_PR':'settle_price', 'CONTRACTS':'contracts',
+                 'VAL_INLAKH':'value_in_lakhs',
+                 'OPEN_INT':'open_interest', 'CHG_IN_OI':'change_in_OI', 'TIMESTAMP':'date'}
 
-    df = read_raw_files(os.path.join(DATA_ROOT, SUB_PATH1, f'{year}/**/fo*bhav.csv.zip'),
-                        n_days=n_days, verbose=verbose)
-    df.rename(columns={
-        'INSTRUMENT':'Instrument', 'SYMBOL':'Symbol', 'TIMESTAMP':'Date',
-        'EXPIRY_DT':'Expiry Date', 'STRIKE_PR':'Strike Price', 'OPTION_TYP':'Option Type',
-        'OPEN':'Open', 'HIGH':'High', 'LOW':'Low', 'CLOSE':'Close',
-        'SETTLE_PR':'Settlement Price',
-        'CONTRACTS':'Traded Contracts', 'VAL_INLAKH':'Traded Value (lakhs)',
-        'OPEN_INT':'Open Interest',
-        'CHG_IN_OI':'Change in OI'
-    }, inplace=True)
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['Expiry Date'] = (pd.to_datetime(df['Expiry Date']))
-    if verbose: print('time check (load files):', common.utils.time_since_last(1), 'seconds')
+    df.rename(columns=cols_dict, inplace=True)
 
-    print('Processing symbol changes ...')
-    sc_df = api.nse_symbols.get_symbol_changes()
-    for symbol in symbols:
-        xx = sc_df.loc[sc_df['new'] == symbol]
-        if xx.shape[0] > 0:
-            print('  symbol: %s to %s' % (xx['old'].values[-1], symbol))
-            df.loc[df['Symbol'] == xx['old'].values[-1], 'Symbol'] = symbol
-    if verbose: print('time check (symbol changes):', common.utils.time_since_last(1), 'seconds')
+    # NOTE: symbol changes not applied. Takes a very long time. Probably not relevant for FO
 
-    all_symbols = sorted(df['Symbol'].unique())
-    print(len(all_symbols), 'symbols found in raw data')
+    df['date'] = pd.to_datetime(df['date'])
+    df['expiry_date'] = pd.to_datetime(df['expiry_date'])
+    df.insert(0, 'date', df.pop('date'))
 
-    symbols_to_process = all_symbols if symbols is None else symbols
-    print(f'Processing {len(symbols_to_process)} symbols :::')
-    cols = ['Date'] + [c for c in df.columns if c != 'Date']
+    # pickle was the fastest but space was 5x of CSV. parquet is best of both worlds
+    for instr in ['OPTIDX', 'OPTSTK', 'FUTIDX', 'FUTSTK']:
+        elapsed_time(1)
+        df1 = df.loc[df['instrument'] == instr].sort_values(by=['date', 'symbol', 'expiry_date'])
+        df1.to_parquet(os.path.join(PATH_2, '%d/fo_bhavcopy_%s.csv.parquet' % (year, instr)),
+                       index=False, engine='pyarrow', compression='gzip')
+        print('  time check fo_bhavcopy_%s: save: %.2f' % (instr, elapsed_time(1)), 'seconds')
+        x = pd.read_parquet(os.path.join(PATH_2, '%d/fo_bhavcopy_%s.csv.parquet' % (year, instr)))
+        print('  time check fo_bhavcopy_%s: read: %.2f' % (instr, elapsed_time(1)), 'seconds')
 
-    def find_em(series):
-        return pd.Series(np.arange(1,len(series)+1), index=series.index)
-
-    for idx, symbol in enumerate(sorted(symbols_to_process)):
-        df_s = df[cols].loc[df['Symbol'] == symbol]
-        df_s.sort_values(by=['Date', 'Instrument', 'Option Type', 'Strike Price','Expiry Date'],
-                         inplace=True)
-        df_s.reset_index(drop=True, inplace=True)
-        df_s['EMT'] = df_s.groupby(
-            ['Date', 'Instrument', 'Strike Price', 'Option Type'])['Expiry Date'].apply(find_em)
-        common.archiver.df_to_file(
-            df_s, os.path.join(DATA_ROOT, SUB_PATH2, f'{year}/fo_bhavcopy_{symbol}.csv'))
-        if (idx+1) % 50 == 0: print(' ', idx+1, 'symbols processed')
-
-    print(len(symbols_to_process), 'symbols processed. Done')
-    if verbose: print('time check (process files):', common.utils.time_since_last(1), 'seconds')
-    print('time check (total time taken):', common.utils.time_since_last(0), 'seconds')
+    print('time check (total time taken):', elapsed_time(0), 'seconds')
 
     return
 
+''' --------------------------------------------------------------------------------------- '''
+"""
 def get_52week_high_low(df):
     df['1yago'] = df['Date'].apply(lambda x: datetime.datetime(x.year-1, x.month, x.day))
 
@@ -401,13 +345,9 @@ def wrapper(year, verbose=False):
     process_cm_reports(year, symbols=symbols, verbose=verbose)
     print('Processing CM Daily Reports ... Done\n')
 
-    """
-    print('FAO processing ... Start')
-    # symbols = tst_syms + ['NIFTY', 'BANKNIFTY']
-    symbols = list(api.nse_symbols.get_symbols(['ind_nifty100list'])) + ['NIFTY', 'BANKNIFTY']
-    process_fao_bhavcopy(year, symbols=symbols, n_days=n_days, verbose=verbose)
-    print('FAO processing ... Done')
-    """
+    print('Processing FO Daily Reports ... Start')
+    process_fo_reports(year, verbose=verbose)
+    print('Processing FO Daily Reports ... Done\n')
 
     return
 
@@ -417,4 +357,5 @@ if __name__ == '__main__':
     verbose = False
     year = datetime.date.today().year if len(sys.argv) == 1 else int(sys.argv[1])
     wrapper(year, verbose=verbose)
+    # process_fo_reports(2024, verbose=verbose)
 
