@@ -24,10 +24,7 @@ class NseCorporateActions:
         if self.verbose:
             print('NseCorporateActions: cf_data', self.cf_data.shape)
         self.cf_mult_cache = {}
-        self.status = True
-
-    def all_ok(self):
-        return self.status
+        self.__status__ = True
 
     def get_history(self, symbol, cutoff_date='2018-01-01', prettyprint=False):
         df = self.cf_data.loc[self.cf_data['Ex Date'] >= cutoff_date]

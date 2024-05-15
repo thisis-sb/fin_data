@@ -278,7 +278,7 @@ def process_fo_reports(year, verbose=False):
                  'OPEN':'open', 'HIGH':'high', 'LOW':'low', 'CLOSE':'close',
                  'SETTLE_PR':'settle_price', 'CONTRACTS':'contracts',
                  'VAL_INLAKH':'value_in_lakhs',
-                 'OPEN_INT':'open_interest', 'CHG_IN_OI':'change_in_OI', 'TIMESTAMP':'date'}
+                 'OPEN_INT':'open_interest', 'CHG_IN_OI':'change_in_oi', 'TIMESTAMP':'date'}
 
     df.rename(columns=cols_dict, inplace=True)
 
