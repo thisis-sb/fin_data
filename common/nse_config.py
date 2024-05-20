@@ -258,18 +258,6 @@ def prepare_symbols_master():
     print('Done, shape:', df.shape)
     return
 
-def custom_indices():
-    x1 = pd.read_csv(os.path.join(PATH_1, 'symbols_master.csv'))
-    x2 = pd.read_excel(os.path.join(PATH_0, '01_STOCKS_DB_IN.xlsx'),
-                       sheet_name='WLs', skiprows=1,
-                       usecols=['Symbol', 'Sector', 'Series', 'WL#', 'Target'])
-    x2 = x2[x2['WL#'].notna()]
-    x2['WL#'] = x2['WL#'].astype(int).astype(str)
-    x2 = pd.merge(x2, x1, on=['Symbol', 'Series'], how='left')
-    x2[['Symbol', 'Series', 'ISIN', 'Company Name', 'Industry', 'WL#']].\
-        to_csv(os.path.join(PATH_2, 'all_watchlist_indices.csv'), index=False)
-    return
-
 def download_cf_ca(year):
     date_today = date.today()
     assert int(year) <= date_today.year, 'Invalid Year %s' % year
@@ -364,7 +352,6 @@ def get_all(full=False, verbose=False):
     get_symbol_changes()
     if full: get_misc()
     if full: prepare_symbols_master()
-    if full: custom_indices()
     return True
 
 ''' --------------------------------------------------------------------------------------- '''
