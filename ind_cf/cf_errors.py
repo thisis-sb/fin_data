@@ -1,5 +1,5 @@
 """
-Analyze CF errors. Currently on CA_FR data. TO DO: SHP
+Analyze CF errors. Currently on CA_FR data.
 """
 ''' --------------------------------------------------------------------------------------- '''
 
@@ -18,18 +18,19 @@ PATH_1  = os.path.join(DATA_ROOT, '02_ind_cf/02_nse_fr_archive')
 ''' --------------------------------------------------------------------------------------- '''
 def checks_1(year):
     print('\nRunning checks_1 for year %d ...' % year)
-    print('checks_1: check json_outcome & xbrl_outcome errors in meta_data files')
-    df = pd.read_csv(os.path.join(PATH_1, 'metadata_%d.csv' % year))
-    x = sorted(df.loc[~df['json_outcome']]['symbol'].unique())
-    print('json_error: %d symbols: %s' % (len(x), ' '.join(x)))
-    x = sorted(df.loc[~df['xbrl_outcome']]['symbol'].unique())
-    print('xbrl_error: %d symbols: %s' % (len(x), ' '.join(x)))
+    print('--> check json_outcome & xbrl_outcome errors in meta_data files')
+    for f in [f'downloaded_data_{year}.csv', f'metadata_{year}.csv']:
+        df = pd.read_csv(os.path.join(PATH_1, f))
+        x = sorted(df.loc[~df['json_outcome']]['symbol'].unique())
+        print('  %s: json_error: %d symbols: %s' % (f, len(x), ' '.join(x)))
+        x = sorted(df.loc[~df['xbrl_outcome']]['symbol'].unique())
+        print('  %s: xbrl_error: %d symbols: %s' % (f, len(x), ' '.join(x)))
     print('checks_1 Completed')
     return
 
 def checks_2(year):
     print('\nRunning checks_2 for year %d ...' % year)
-    print('checks_2: compare xbrl_size in meta_data file with len(xbrl_data) in xbrl archive')
+    print('--> compare xbrl_size in meta_data file with len(xbrl_data) in xbrl archive')
     metadata = pd.read_csv(os.path.join(PATH_1, f'metadata_{year}.csv'))
     print('metadata.shape:', metadata.shape)
 
@@ -41,10 +42,18 @@ def checks_2(year):
     ac_xbrl = archiver_cache.ArchiverCache(xbrl_archive_path_func, cache_size=5)
 
     not_matching = []
+    err_list = []
     for idx, row in metadata.iterrows():
         if bool(row['xbrl_outcome']):
             xbrl_size = row['xbrl_size']
-            xbrl_data = ac_xbrl.get_value(row['xbrl_link'])
+            try:
+                xbrl_data = ac_xbrl.get_value(row['xbrl_link'])
+            except Exception as e:
+                err_list.append({'symbol':row['symbol'],
+                                 'err_msg':'failed to get xbrl_data',
+                                 'xbrl_link':row['xbrl_link']}
+                                )
+                continue
             if xbrl_data is not None and xbrl_size > 0 and xbrl_size != len(xbrl_data):
                 not_matching.append({'symbol':row['symbol'],
                                      'seqNumber':row['seqNumber'],
@@ -52,26 +61,38 @@ def checks_2(year):
                                      'len(xbrl_data)':len(xbrl_data),
                                      'abs(size_diff)': abs(xbrl_size - len(xbrl_data))
                                      })
-        if idx % 1000 == 0:
-            print('  Completed %d / %d' % (idx, metadata.shape[0]))
-    print('All Completed %d / %d' % (idx, metadata.shape[0]))
+        if (idx+1) % 1000 == 0:
+            print('  Completed %5d / %d' % ((idx+1), metadata.shape[0]))
+
+    print('\nAll Completed %5d / %d' % ((idx+1), metadata.shape[0]))
 
     if len(not_matching) > 0:
         not_matching = pd.DataFrame(not_matching)
         f1 = os.path.join(LOG_DIR, f'checks_2_{year}.csv')
         not_matching.to_csv(f1, index=False)
-        print('  %d records not matching, saved in %s' % (not_matching.shape[0], f1))
+        print('  xbrl_size not matching for %d records, saved in %s' % (not_matching.shape[0], os.path.basename(f1)))
         f2 = os.path.join(LOG_DIR, f'cf_errors_check2_{year}_symbols.txt')
         with open(f2, 'w') as f:
             f.write(' '.join(sorted(not_matching['symbol'].unique())))
-            print('  not_matching symbols saved in', f2)
+            print('  not_matching symbols saved in', os.path.basename(f2))
+            print('  --> to be possibly cleaned and downloaded again')
+
+    if len(err_list) > 0:
+        f3 = os.path.join(LOG_DIR, f'checks_2_ERRORS_{year}.csv')
+        x = pd.DataFrame(err_list).reset_index(drop=True)
+        x.to_csv(f3, index=False)
+        print('  %d SEVERE ERRORS, saved in %s.\nSEVERE ERRORS in: %s'
+              % (x.shape[0], os.path.basename(f3), x['symbol'].unique()))
+        print('  --> to be possibly cleaned and downloaded again')
+
     print('checks_2 Completed')
 
     return
 
 def checks_3(archive_type, clear=False):
     assert archive_type == 'json' or archive_type == 'xbrl', f'Invalid archive_type: {archive_type}'
-    print('\nRunning checks_3 (ALL YEARS): archive_type: %s, clear: %s ...' % (archive_type, clear))
+    print('\nRunning checks_3 (all years) ...')
+    print('--> check for stale keys in all %s archives, clear: %s' % (archive_type, clear))
 
     archive_files = glob.glob(os.path.join(PATH_1, '20**/%s_period*' % archive_type))
     meta_data_files = glob.glob(os.path.join(PATH_1, f'metadata_*.csv'))
@@ -83,10 +104,10 @@ def checks_3(archive_type, clear=False):
     for f in archive_files:
         ar = archiver.Archiver(f, mode='r')
         all_keys = ar.keys()
-        print('   %s: size: %d' % (os.path.basename(f), len(all_keys)), end='')
-        stale_keys = [k for k in all_keys if k not in metadata_keys]
 
-        print(', %d keys appear to be stale' % len(stale_keys), end='')
+        print('   %s: ' % os.path.basename(f), end='')
+        stale_keys = [k for k in all_keys if k not in metadata_keys]
+        print('%3d keys appear to be stale (out of %d).' % (len(stale_keys), len(all_keys)))
         """
         ''' test & enable later since very few stale keys found so far (why not?)'''
         if clear and len(stale_keys) > 0:
@@ -95,10 +116,46 @@ def checks_3(archive_type, clear=False):
                 ar.remove(k)
             ar.flush()
             print(', all cleared', end='')"""
-        print('.')
 
-    print('checks_2 Completed')
+    print('checks_3 Completed')
 
+    return
+
+def clear_errors(year, symbols=None, clear_downloads=False, clear_json=False, clear_xbrl=False,):
+    files_to_clear = ['metadata_%d.csv' % year]
+    if clear_downloads: files_to_clear.append('downloaded_data_%d.csv' % year)
+    if symbols is None:
+        # clear json and/or xbrl errors in year from files in files_to_clear
+        to_clear = []
+        if clear_json: to_clear.append('json_outcome')
+        if clear_xbrl: to_clear.append('xbrl_outcome')
+        print('clear_errors: clearing %s errors for year %d ...' % (to_clear, year))
+        for t in to_clear:
+            for f in files_to_clear:
+                df = pd.read_csv(os.path.join(PATH_1, f))
+                x = df.loc[~df[t]]
+                print(f'  {t} errors:  {os.path.basename(f)}: total = {df.shape[0]}, ', end='')
+                print(f'{x.shape[0]} errors; ', end='')
+                if x.shape[0] > 0:
+                    df = df[df[t]]
+                    df.to_csv(os.path.join(PATH_1, f), index=False)
+                    print(f'cleared; new_total = {df.shape[0]}')
+                else:
+                    print('nothing done')
+    else:
+        # symbols is not None, clear all errors for symbol in year from files in files_to_clear
+        print('clear_errors: for %d symbols in year %d\n  symbols: %s' % (len(symbols), year, symbols))
+        for f in files_to_clear:
+            df = pd.read_csv(os.path.join(PATH_1, f))
+            x = df.loc[df['symbol'].isin(symbols)]
+            print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
+            print(f'{x.shape[0]} entries for {len(symbols)} symbols, ', end='')
+            if x.shape[0] > 0:
+                df = df[~df['symbol'].isin(symbols)]
+                df.to_csv(os.path.join(PATH_1, f), index=False)
+                print(f'entries cleared, new_total = {df.shape[0]}')
+            else:
+                print('nothing done')
     return
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -107,11 +164,12 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     arg_parser = ArgumentParser()
     arg_parser.add_argument("-s", action='store_true', help='show all errors for the year')
+    arg_parser.add_argument("-y", type=int, help='calendar year')
     arg_parser.add_argument("-c", action='store_true', help='clear errors for the year, see j/x/sy')
     arg_parser.add_argument('-j', action='store_true', help='clear json outcome errors in the year')
     arg_parser.add_argument('-x', action='store_true', help='clear xbrl outcome errors in the year')
     arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
-    arg_parser.add_argument("-y", type=int, help='calendar year')
+    arg_parser.add_argument('-d', action='store_true', help='ASLO: clear downloaded data for the selection')
 
     args = arg_parser.parse_args()
 
@@ -123,36 +181,6 @@ if __name__ == '__main__':
         checks_3(archive_type='json', clear=False)
         checks_3(archive_type='xbrl', clear=False)
     elif args.c:  # make sure it is explicitly checked
-        f = os.path.join(PATH_1, 'metadata_%d.csv' % year)
-        df = pd.read_csv(f)
-        if not args.sy:
-            errs = []
-            if args.j: errs.append('json_outcome')
-            if args.x: errs.append('xbrl_outcome')
-            print('Clearing %s outcome errors for year %d ...' % (errs, year))
-            for err in errs:
-                x = df.loc[~df[err]]
-                print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
-                print(f'{x.shape[0]} {err} errors, ', end='')
-                if x.shape[0] > 0:
-                    df = df[df[err]]
-                    df.to_csv(f, index=False)
-                    print(f'errors cleared, new_total = {df.shape[0]}')
-                else:
-                    print('nothing done')
-                ''' should we clear archives as well?
-                    Not for now. Running download_fr overwrites them'''
-        else:  # args.sy is not None
-            print('Clearing data for %d symbols in year %d ...' % (len(args.sy), year))
-            print('  symbols:', args.sy)
-            x = df.loc[df['symbol'].isin(args.sy)]
-            print(f'{os.path.basename(f)}: total = {df.shape[0]}, ', end='')
-            print(f'{x.shape[0]} entries for {len(args.sy)} symbols, ', end='')
-            if x.shape[0] > 0:
-                df = df[~df['symbol'].isin(args.sy)]
-                df.to_csv(f, index=False)
-                print(f'entries cleared, new_total = {df.shape[0]}')
-            else:
-                print('nothing done')
+        clear_errors(year, symbols=args.sy, clear_downloads=args.d, clear_json=args.j, clear_xbrl=args.x)
     else:
         arg_parser.print_help()

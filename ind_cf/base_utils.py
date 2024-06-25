@@ -10,7 +10,6 @@ import sys
 import pandas as pd
 import requests
 import xml.etree.ElementTree as ElementTree
-import pygeneric.http_utils as pyg_html_utils
 import pygeneric.fin_utils as pyg_fin_utils
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -27,12 +26,6 @@ def prepare_json_key(row):
     return 'params=%s&seq_id=%s' % (params, seqNumber) + \
            '&industry=%s&frOldNewFlag=%s' % (industry, oldNewFlag) + \
            '&ind=%s&format=%s' % (reInd, format_x)
-
-def get_xbrl(url):
-    response = requests.get(url, headers=pyg_html_utils.http_request_header())
-    if response.status_code != 200:
-        raise ValueError('get_xbrl: code = %d, link = [%s]' % (response.status_code, url))
-    return response.content
 
 def parse_xbrl_fr(xbrl_str, corrections=None):
     df = pd.DataFrame(columns=['tag', 'context'])
@@ -87,7 +80,7 @@ def parse_xbrl_fr(xbrl_str, corrections=None):
     balance_sheet = 'Absent'
     if result_format == 'default' and \
             df.loc[(df['context'] == 'OneI') &
-                   (df['tag'].isin(['Assets', 'Liabilities', 'Equity']))].shape[0] >= 3:
+                   (df['tag'].isin(['Assets', 'Liabilities', 'Equity', 'EquityAndLiabilities']))].shape[0] >= 3:
             balance_sheet = 'Present'
     elif result_format == 'banking' and \
             df.loc[(df['context'] == 'OneI') &
