@@ -28,7 +28,7 @@ class ProcessCFFRs:
 
         self.timestamp = datetime.today().strftime('%Y-%m-%d-%H-%M')
         self.cf_fr_filename = os.path.join(PATH_1, 'CF_FR_%d.csv' % self.year)
-        self.downloaded_data_filename = os.path.join(PATH_2, f'downloaded_data_{self.year}.csv')
+        self.downloaded_data_filename = os.path.join(PATH_2, f'downloads_{self.year}.csv')
         self.final_metadata_filename = os.path.join(PATH_2, 'metadata_%d.csv' % self.year)
 
         def json_archive_path_func(key):
@@ -43,20 +43,35 @@ class ProcessCFFRs:
         self.ac_xbrl = archiver_cache.ArchiverCache(xbrl_archive_path_func, cache_size=5)
         assert self.ac_xbrl.all_ok(), 'ERROR! Corrupted ArchiverCache'
 
-    def run(self):
+    def run(self, max_to_process):
         self.__load_files__()
 
         if self.frs_to_process.shape[0] == 0:
             print('Nothing to process.')
             return
+        if max_to_process is None: max_to_process = self.frs_to_process.shape[0]
 
         print('\nProcessCFFRs initialized. To process: %d' % self.frs_to_process.shape[0])
         t = datetime_utils.elapsed_time('ProcessCFFRs.run')
+        n_processed = 0
         for idx in self.frs_to_process.index:
             misc.print_progress_str(idx + 1, self.frs_to_process.shape[0])
             row_dict = self.frs_to_process.loc[idx].to_dict()
             json_data, xbrl_data = self.__get_archive_data__(row_dict)
-            # print('%s: %d, %d' % (idx, len(json_data), len(xbrl_data)))
+
+            result_format = 'not-found'
+            if json_data is not None:
+                try:
+                    result_format = json_data['resultFormat']
+                except Exception as e:
+                    row_dict['json_outcome'] = False
+                    row_dict['json_error'] = 'corrputed json_data (%s):\n%s\n%s' % (
+                        json_data, e, traceback.format_exc())
+            else:
+                row_dict['json_outcome'] = False
+                row_dict['json_error'] = 'corrputed json_data (%s):\n%s\n%s' % (
+                    json_data, e, traceback.format_exc())
+
             xbrl_balance_sheet = False
             if xbrl_data is not None:
                 try:
@@ -74,7 +89,7 @@ class ProcessCFFRs:
                 'toDate': row_dict['toDate'],
                 'relatingTo': row_dict['relatingTo'],
                 'seqNumber': row_dict['seqNumber'],
-                'resultFormat': json_data['resultFormat'],
+                'resultFormat': result_format,
                 'filingDate': row_dict['filingDate'],
                 'key': row_dict['key'],
                 'json_url': row_dict['json_url'],
@@ -96,6 +111,10 @@ class ProcessCFFRs:
                 df.sort_values(by='processing_timestamp', inplace=True)
                 df.to_csv(self.final_metadata_filename, index=False)
 
+            n_processed += 1
+            if n_processed >= max_to_process:
+                break
+
         ''' save metadata (final)'''
         df = pd.DataFrame(list(self.final_metadata.values()))
         df.sort_values(by='processing_timestamp', inplace=True)
@@ -104,7 +123,7 @@ class ProcessCFFRs:
 
         print('\nProcessing complete. metadata_%d.csv shape: %s' % (self.year, df.shape))
         print('time taken: %.2f seconds for %d FRs, %.3f seconds/record'
-              % (t, self.frs_to_process.shape[0], t / self.frs_to_process.shape[0]))
+              % (t, n_processed, t / n_processed))
 
         return
 
@@ -153,6 +172,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     arg_parser = ArgumentParser()
     arg_parser.add_argument("-y", help='Process for calendar year')
+    arg_parser.add_argument("-mp", type=int, help='max_to_process (default all)')
     arg_parser.add_argument('-url', help="XBRL url to download & check")
     arg_parser.add_argument('-ctx', default='OneI', help="Filter for Context (only with URL)")
     arg_parser.add_argument('-v', action='store_true', help="Verbose")
@@ -170,4 +190,4 @@ if __name__ == '__main__':
         print(df.loc[df['context'] == args.ctx].to_string(index=False))
     else:
         year = datetime.today().year if args.y is None else int(args.y)
-        ProcessCFFRs(year=year, verbose=args.v).run()
+        ProcessCFFRs(year=year, verbose=args.v).run(max_to_process=args.mp)

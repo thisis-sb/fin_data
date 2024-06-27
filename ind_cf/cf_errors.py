@@ -19,7 +19,7 @@ PATH_1  = os.path.join(DATA_ROOT, '02_ind_cf/02_nse_fr_archive')
 def checks_1(year):
     print('\nRunning checks_1 for year %d ...' % year)
     print('--> check json_outcome & xbrl_outcome errors in meta_data files')
-    for f in [f'downloaded_data_{year}.csv', f'metadata_{year}.csv']:
+    for f in [f'downloads_{year}.csv', f'metadata_{year}.csv']:
         df = pd.read_csv(os.path.join(PATH_1, f))
         x = sorted(df.loc[~df['json_outcome']]['symbol'].unique())
         print('  %s: json_error: %d symbols: %s' % (f, len(x), ' '.join(x)))
@@ -123,7 +123,7 @@ def checks_3(archive_type, clear=False):
 
 def clear_errors(year, symbols=None, clear_downloads=False, clear_json=False, clear_xbrl=False,):
     files_to_clear = ['metadata_%d.csv' % year]
-    if clear_downloads: files_to_clear.append('downloaded_data_%d.csv' % year)
+    if clear_downloads: files_to_clear.append('downloads_%d.csv' % year)
     if symbols is None:
         # clear json and/or xbrl errors in year from files in files_to_clear
         to_clear = []
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('-j', action='store_true', help='clear json outcome errors in the year')
     arg_parser.add_argument('-x', action='store_true', help='clear xbrl outcome errors in the year')
     arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
-    arg_parser.add_argument('-d', action='store_true', help='ASLO: clear downloaded data for the selection')
+    arg_parser.add_argument('-d', action='store_true', help='ASLO: clear downloads for the selection')
 
     args = arg_parser.parse_args()
 

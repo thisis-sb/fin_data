@@ -11,7 +11,7 @@ from datetime import datetime
 import traceback
 import pandas as pd
 import pygeneric.misc as pyg_misc
-from pygeneric import archiver, http_utils
+from pygeneric import archiver, http_utils, datetime_utils
 from fin_data.ind_cf import base_utils
 
 PATH_1 = os.path.join(DATA_ROOT, '02_ind_cf/01_nse_fr_filings')
@@ -33,7 +33,7 @@ class DownloadManagerNSE:
         self.timestamp = datetime.today().strftime('%Y-%m-%d-%H-%M')
         self.json_base_url = 'https://www.nseindia.com/api/corporates-financial-results-data?index=equities&'
 
-        self.downloaded_data_filename = os.path.join(PATH_2, f'downloaded_data_{year}.csv')
+        self.downloaded_data_filename = os.path.join(PATH_2, f'downloads_{year}.csv')
 
     def download(self, max_downloads=1000):
         cf_fr_filename = os.path.join(PATH_1, 'CF_FR_%d.csv' % self.year)
@@ -52,10 +52,9 @@ class DownloadManagerNSE:
             return
 
         print('\nDownloadManagerNSE initialized. To download: %d' % cf_frs.shape[0])
+        t = datetime_utils.elapsed_time('DownloadManagerNSE.download')
         self.http_obj = http_utils.HttpDownloads(max_tries=10, timeout=30)
-        n_downloaded = 0
-        self.session_errors = 0
-
+        n_downloaded, self.session_errors = 0, 0
         for idx in cf_frs.index:
             pyg_misc.print_progress_str(idx + 1, cf_frs.shape[0])
 
@@ -69,8 +68,10 @@ class DownloadManagerNSE:
                 if n_downloaded >= max_downloads:
                     break
         self.flush_all()
+        t = datetime_utils.elapsed_time('DownloadManagerNSE.download')
 
         print('\nDownloads finished --> n_downloaded/session_errors: %d/%d' % (n_downloaded, self.session_errors))
+        print('time taken: %.2f seconds for %d downloads, %.3f seconds/record' % (t, n_downloaded, t / n_downloaded))
         df = pd.read_csv(self.downloaded_data_filename)
         print('saved_metadata: %d rows, %d errors' % (df.shape[0], df.loc[~df['json_outcome']].shape[0]))
 
