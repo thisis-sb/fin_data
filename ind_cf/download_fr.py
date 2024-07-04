@@ -100,7 +100,7 @@ class DownloadManagerNSE:
             json_download_outcome['json_archive_path'] = json_archive_file_name
         except Exception as e:
             err_msg = 'http_get_both failed %s\n%s' % (e, traceback.format_exc())
-            json_outcome['json_error'] = err_msg
+            json_download_outcome['json_error'] = err_msg
             self.session_errors += 1
             ''' should we return here? not sure. '''
 

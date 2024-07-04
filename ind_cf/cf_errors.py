@@ -54,7 +54,7 @@ def checks_2(year):
                                  'xbrl_link':row['xbrl_link']}
                                 )
                 continue
-            if xbrl_data is not None and xbrl_size > 0 and xbrl_size != len(xbrl_data):
+            if xbrl_data is not None and (xbrl_size/len(xbrl_data) < 0.95 or xbrl_size/len(xbrl_data) > 1.05):
                 not_matching.append({'symbol':row['symbol'],
                                      'seqNumber':row['seqNumber'],
                                      'xbrl_size': xbrl_size,
@@ -84,6 +84,8 @@ def checks_2(year):
         print('  %d SEVERE ERRORS, saved in %s.\nSEVERE ERRORS in: %s'
               % (x.shape[0], os.path.basename(f3), x['symbol'].unique()))
         print('  --> to be possibly cleaned and downloaded again')
+    else:
+        print('  NO severe errors found')
 
     print('checks_2 Completed')
 
@@ -92,13 +94,17 @@ def checks_2(year):
 def checks_3(archive_type, clear=False):
     assert archive_type == 'json' or archive_type == 'xbrl', f'Invalid archive_type: {archive_type}'
     print('\nRunning checks_3 (all years) ...')
-    print('--> check for stale keys in all %s archives, clear: %s' % (archive_type, clear))
+    print('--> check for stale keys in all %s archives (clear=%s)' % (archive_type, clear))
 
-    archive_files = glob.glob(os.path.join(PATH_1, '20**/%s_period*' % archive_type))
+    archive_files   = glob.glob(os.path.join(PATH_1, '20**/%s_period*' % archive_type))
     meta_data_files = glob.glob(os.path.join(PATH_1, f'metadata_*.csv'))
+    downloads_files = glob.glob(os.path.join(PATH_1, f'downloads_*.csv'))
+
     key_col = 'key' if archive_type == 'json' else 'xbrl_link'
-    metadata_keys = pd.concat([pd.read_csv(f) for f in meta_data_files])[key_col].unique()
-    print('%d archive files, %d metadata_keys.' % (len(archive_files), len(metadata_keys)))
+    metadata_keys  = pd.concat([pd.read_csv(f) for f in meta_data_files])[key_col].unique()
+    downloads_keys = pd.concat([pd.read_csv(f) for f in downloads_files])[key_col].unique()
+    print('%d archive files, %d metadata_keys, %d downloads_keys'
+          % (len(archive_files), len(metadata_keys), len(downloads_keys)))
 
     print('Processing ...')
     for f in archive_files:
@@ -107,15 +113,19 @@ def checks_3(archive_type, clear=False):
 
         print('   %s: ' % os.path.basename(f), end='')
         stale_keys = [k for k in all_keys if k not in metadata_keys]
-        print('%3d keys appear to be stale (out of %d).' % (len(stale_keys), len(all_keys)))
-        """
-        ''' test & enable later since very few stale keys found so far (why not?)'''
-        if clear and len(stale_keys) > 0:
-            ar = archiver.Archiver(f, mode='w', update=True)
-            for k in stale_keys:
-                ar.remove(k)
-            ar.flush()
-            print(', all cleared', end='')"""
+        stale_keys = [k for k in stale_keys if k not in downloads_keys]
+        print('%3d keys appear to be stale (out of %d).' % (len(stale_keys), len(all_keys)), end=' ')
+        if len(stale_keys) > 0:
+            if clear:
+                ar = archiver.Archiver(f, mode='w', update=True)
+                for k in stale_keys:
+                    ar.remove(k)
+                ar.flush()
+                print('. All cleared!')
+            else:
+                print('. None cleared!')
+        else:
+            print('.')
 
     print('checks_3 Completed')
 
@@ -163,13 +173,14 @@ if __name__ == '__main__':
     from datetime import datetime
     from argparse import ArgumentParser
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("-s", action='store_true', help='show all errors for the year')
+    arg_parser.add_argument("-s",  action='store_true', help='show all errors for the year')
     arg_parser.add_argument("-y", type=int, help='calendar year')
     arg_parser.add_argument("-c", action='store_true', help='clear errors for the year, see j/x/sy')
     arg_parser.add_argument('-j', action='store_true', help='clear json outcome errors in the year')
     arg_parser.add_argument('-x', action='store_true', help='clear xbrl outcome errors in the year')
-    arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
     arg_parser.add_argument('-d', action='store_true', help='ASLO: clear downloads for the selection')
+    arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
+    arg_parser.add_argument("-csk", action='store_true', help='clear ALL stale keys')
 
     args = arg_parser.parse_args()
 
@@ -178,9 +189,15 @@ if __name__ == '__main__':
     if args.s:
         checks_1(year)
         checks_2(year)
-        checks_3(archive_type='json', clear=False)
-        checks_3(archive_type='xbrl', clear=False)
-    elif args.c:  # make sure it is explicitly checked
+        checks_3(archive_type='json')
+        checks_3(archive_type='xbrl')
+    elif args.c:
+        if not (args.j or args.x or args.sy):
+            print('\nNothing done. Specify -j or -x or -sy\n')
+            exit()
         clear_errors(year, symbols=args.sy, clear_downloads=args.d, clear_json=args.j, clear_xbrl=args.x)
+    elif args.csk:
+        checks_3(archive_type='json', clear=args.csk)
+        checks_3(archive_type='xbrl', clear=args.csk)
     else:
         arg_parser.print_help()

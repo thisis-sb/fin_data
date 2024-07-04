@@ -190,19 +190,23 @@ def sectoral_indices():
 
 def get_etf_list():
     print('Downloading eq_etfseclist.csv', end=' ... ')
+    url = 'https://archives.nseindia.com/content/equities/eq_etfseclist.csv'
+    # before - as csv was in fact an excel --> df = pd.read_excel(url, sheet_name='in')
+    df = pd.read_csv(url, encoding='cp1252')
+
+    """
+    # 2024-07-01 - columns got changed.
     clean_cols = ['Symbol', 'ISIN', 'Series', 'Company Name', 'Face Value',
                   'Paid-Up Value', 'Market Lot', 'Listing Date', 'Industry', 'Underlying',
                   'ETF Name', 'Sr.No.', 'Instrument Type']
-    url = 'https://archives.nseindia.com/content/equities/eq_etfseclist.csv'
     cols_map = {'Symbol': clean_cols[0], 'ISIN Number': clean_cols[1],
                 'Underlying': clean_cols[9], 'Security Name': clean_cols[10],
                 ' Face Value': clean_cols[4], ' Market Lot': clean_cols[6],
                 ' Date of Listing': clean_cols[7]
                 }
-    # before - as csv was in fact an excel --> df = pd.read_excel(url, sheet_name='in')
-    df = pd.read_csv(url, encoding='cp1252')
     df.rename(columns=cols_map, inplace=True)
     df = df[list(cols_map.values())]
+    """
     df.to_csv(os.path.join(PATH_1, os.path.basename(url)), index=False)
     print('Done, shape:', df.shape)
     return

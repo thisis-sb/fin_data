@@ -43,7 +43,7 @@ class ProcessCFFRs:
         self.ac_xbrl = archiver_cache.ArchiverCache(xbrl_archive_path_func, cache_size=5)
         assert self.ac_xbrl.all_ok(), 'ERROR! Corrupted ArchiverCache'
 
-    def run(self, max_to_process):
+    def run(self, max_to_process=None):
         self.__load_files__()
 
         if self.frs_to_process.shape[0] == 0:
@@ -85,11 +85,17 @@ class ProcessCFFRs:
                 'symbol': row_dict['symbol'],
                 'isin': row_dict['isin'],
                 'consolidated': row_dict['consolidated'],
+                'cumulative': row_dict['cumulative'],
                 'period': row_dict['period'],
+                'fromDate': row_dict['fromDate'],
                 'toDate': row_dict['toDate'],
                 'relatingTo': row_dict['relatingTo'],
                 'seqNumber': row_dict['seqNumber'],
                 'resultFormat': result_format,
+                'indAs':row_dict['indAs'],
+                'bank': row_dict['bank'],
+                'audited': row_dict['audited'],
+                'oldNewFlag': row_dict['oldNewFlag'],
                 'filingDate': row_dict['filingDate'],
                 'key': row_dict['key'],
                 'json_url': row_dict['json_url'],
