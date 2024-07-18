@@ -114,7 +114,7 @@ class NseSpotPVData:
             df = self.adjust_for_corporate_actions(
                 symbols, df,
                 ['Prev Close', 'Open', 'High', 'Low', 'Close'],
-                ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
+                ['Volume', 'Traded Value', 'No Of Trades', 'Delivery Volume']
             )
             df.sort_values(by=['Date', 'Series', 'Symbol'], inplace=True)
             df.reset_index(drop=True, inplace=True)
@@ -128,7 +128,7 @@ class NseSpotPVData:
             df1 = self.adjust_for_corporate_actions(
                 symbol, df1,
                 ['Prev Close', 'Open', 'High', 'Low', 'Close'],
-                ['Volume', 'Volume_MTO', 'Traded Value', 'No Of Trades', 'Delivery Volume']
+                ['Volume', 'Traded Value', 'No Of Trades', 'Delivery Volume']
             )
             """if get52wkhl:
                 df1 = self.get_52week_high_low(df1)"""

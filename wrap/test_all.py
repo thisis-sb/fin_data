@@ -36,17 +36,17 @@ def test_nse_spot(verbose=False):
 
         for c in ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Volume']:
             assert (~(abs(df1[c] - df2[c]) < 0.5)).sum() == 0, \
-                '\nERROR!! verify_results/1: %s: Column: %s: %d\n'\
+                '\nERROR!! verify_results/1: %s: Column: %s: %d'\
                 % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum())
 
         for c in ['Delivery Volume']:
             if (~(abs(df1[c].astype(float) - df2[c].replace('-', 0).astype(float)) < 0.5)).sum() > 1:
-                print('\nWARNING!! verify_results/2: %s: Column: %s: %d\n'
+                print('\nWARNING!! verify_results/2: %s: Column: %s: %d'
                       % (symbol, c, (~(abs(df1[c].astype(float) - df2[c].replace('-', 0).astype(float)) < 0.5)).sum()))
 
         for c in ['No Of Trades', 'Traded Value']:
             if (~(abs(df1[c] - df2[c]) < 5)).sum() > 1:
-                print('\nWARNING!! verify_results/3: %s: Column: %s: %d\n'
+                print('\nWARNING!! verify_results/3: %s: Column: %s: %d'
                       % (symbol, c, (~(abs(df1[c] - df2[c]) < 0.5)).sum()))
 
         return
@@ -62,7 +62,7 @@ def test_nse_spot(verbose=False):
         print('') if verbose else print('OK')
         return
 
-    end_date = (datetime.today() - timedelta(days=7)).strftime('%Y-%m-%d')
+    end_date = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')
     check_data(symbols, ['2018-01-01', '2018-12-31'])
     check_data(symbols, ['2019-01-01', '2019-12-31'])
     check_data(symbols, ['2020-01-01', '2020-12-31'])
