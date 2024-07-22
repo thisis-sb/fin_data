@@ -7,8 +7,8 @@ import sys
 import datetime
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr
-from fin_data.wrap import test_all
 from fin_data.ind_cf import scrape_nse, download_fr, process_fr
+from fin_data.apps import test_all
 
 ''' --------------------------------------------------------------------------------------- '''
 def e2e_nse_common(full):
@@ -62,7 +62,7 @@ def e2e_ind_cf():
 
     print("\n>>> Task / download_fr: Starting")
     download_fr.DownloadManagerNSE(current_year).download()
-    process_fr.ProcessCFFRs(current_year).run()
+    process_fr.ProcessCFFRs(current_year).process()
     print("\n>>> Task / download_fr: Finished")
 
     return

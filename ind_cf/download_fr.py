@@ -7,6 +7,7 @@ from fin_data.env import *
 import os
 import sys
 import glob
+from pathlib import Path
 from datetime import datetime
 import traceback
 import pandas as pd
@@ -22,149 +23,210 @@ class DownloadManagerNSE:
     def __init__(self, year, verbose=False):
         self.verbose = verbose
         self.year = year
-
         self.checkpoint_interval = 200
-        self.json_archives = {}
-        self.xbrl_archives = {}
-        self.download_metadata = {}
         self.session_errors = 0
         self.http_obj = None
 
+        self.dl_md_filename_json = os.path.join(PATH_2, f'dl_md/download_metadata_json_{year}.csv')
+        self.dl_md_filename_xbrl = os.path.join(PATH_2, f'dl_md/download_metadata_xbrl_{year}.csv')
+        self.json_data_archives = {}
+        self.xbrl_data_archives = {}
+        self.dl_md_json = {}
+        self.dl_md_xbrl = {}
+
+        self.base_url_json = 'https://www.nseindia.com/api/' \
+                             'corporates-financial-results-data?index=equities&'
+
         self.timestamp = datetime.today().strftime('%Y-%m-%d-%H-%M')
-        self.json_base_url = 'https://www.nseindia.com/api/corporates-financial-results-data?index=equities&'
-
-        self.downloaded_data_filename = os.path.join(PATH_2, f'downloads_{year}.csv')
-
-    def download(self, max_downloads=1000):
-        cf_fr_filename = os.path.join(PATH_1, 'CF_FR_%d.csv' % self.year)
-        cf_frs = pd.read_csv(cf_fr_filename)
-        print('\nLoaded %s, shape %s' % (cf_fr_filename, cf_frs.shape))
-
-        cf_frs['key'] = cf_frs.apply(lambda x: base_utils.prepare_json_key(x), axis=1)
-        if os.path.exists(self.downloaded_data_filename):
-            df = pd.read_csv(self.downloaded_data_filename)
-            print('Loaded %s, shape %s' % (self.downloaded_data_filename, df.shape))
-            self.download_metadata = dict(zip(df['key'], df.to_dict('records')))
-            cf_frs = cf_frs.loc[~cf_frs['key'].isin(df['key'].unique())].reset_index(drop=True)
-
-        if cf_frs.shape[0] == 0:
-            print('Nothing to download.')
-            return
-
-        print('\nDownloadManagerNSE initialized. To download: %d' % cf_frs.shape[0])
-        t = datetime_utils.elapsed_time('DownloadManagerNSE.download')
-        self.http_obj = http_utils.HttpDownloads(max_tries=10, timeout=30)
-        n_downloaded, self.session_errors = 0, 0
-        for idx in cf_frs.index:
-            pyg_misc.print_progress_str(idx + 1, cf_frs.shape[0])
-
-            cf_fr_row = cf_frs.loc[idx].to_dict()
-            if self.download_one(cf_fr_row):
-                n_downloaded += 1
-                if n_downloaded > 0 and n_downloaded % self.checkpoint_interval == 0:
-                    self.flush_all()
-                    print('\n--> flush_all: full_metadata size: %d, n_downloaded/session_errors: %d/%d'
-                          % (len(self.download_metadata), n_downloaded, self.session_errors))
-                if n_downloaded >= max_downloads:
-                    break
-        self.flush_all()
-        t = datetime_utils.elapsed_time('DownloadManagerNSE.download')
-
-        print('\nDownloads finished --> n_downloaded/session_errors: %d/%d' % (n_downloaded, self.session_errors))
-        print('time taken: %.2f seconds for %d downloads, %.3f seconds/record' % (t, n_downloaded, t / n_downloaded))
-        df = pd.read_csv(self.downloaded_data_filename)
-        print('saved_metadata: %d rows, %d errors' % (df.shape[0], df.loc[~df['json_outcome']].shape[0]))
 
         return
 
-    def download_one(self, cf_fr_row):
-        ''' just download here. all error checks are done during pre-processing '''
-        key = cf_fr_row['key']
+    def download(self, max_downloads=1000):
+        self.__download__('json', max_downloads)
+        self.__download__('xbrl', max_downloads)
+        return
+
+    def __download__(self, mode, max_downloads):
+        assert mode in ['json', 'xbrl']
+        print(f'\nStarting __download__ ({mode}): \n%s' % (90 * '-'))
+        to_download = self.__what_to_download__(mode)
+
+        if to_download.shape[0] == 0:
+            print(f'__download__ ({mode}): Nothing to download.')
+            return
+
+        print('\nTo download (%s): %d (max_downloads: %d)' % (mode, to_download.shape[0], max_downloads))
+
+        if self.http_obj is None:
+            self.http_obj = http_utils.HttpDownloads(max_tries=10, timeout=30)
+        t = datetime_utils.elapsed_time('DownloadManagerNSE.__download__')
+        n_downloaded, self.session_errors = 0, 0
+
+        for idx in to_download.index:
+            pyg_misc.print_progress_str(idx + 1, to_download.shape[0])
+
+            cf_fr_row = to_download.loc[idx].to_dict()
+            if self.__download_one__(mode, cf_fr_row):
+                n_downloaded += 1
+                if n_downloaded > 0 and n_downloaded % self.checkpoint_interval == 0:
+                    self.__flush__(mode)
+                    md_file = self.dl_md_filename_json if mode == 'json' else self.dl_md_filename_xbrl
+                    md_len  = len(self.dl_md_json) if mode == 'json' else len(self.dl_md_xbrl)
+                    print('\n    --> flush: %s size: %d, n_downloaded/session_errors: %d/%d'
+                          % (os.path.basename(md_file), md_len, n_downloaded, self.session_errors))
+                if n_downloaded >= max_downloads:
+                    break
+        self.__flush__(mode)
+        t = datetime_utils.elapsed_time('DownloadManagerNSE.__download__')
+        print(f'\n\nDownloads ({mode}) completed. Summary:')
+
+        print('  n_downloaded/session_errors: %d/%d' % (n_downloaded, self.session_errors))
+        print('  time taken: %.2f seconds for %d downloads' % (t, n_downloaded))
+        print('  --> %.3f seconds/record' % (t / n_downloaded))
+
+        md_file = self.dl_md_filename_json if mode == 'json' else self.dl_md_filename_xbrl
+        outcome_column = 'json_outcome' if mode == 'json' else 'xbrl_outcome'
+        df = pd.read_csv(md_file)
+        n_errors = df.loc[~df[outcome_column]].shape[0]
+        print('  %s: %d rows, %d errors' % (os.path.basename(md_file), df.shape[0], n_errors))
+        print(90 * '-')
+
+        return
+
+    def __download_one__(self, mode, cf_fr_row):
+        assert mode in ['json', 'xbrl']
+        return self.__download_one_json__(cf_fr_row) if mode == 'json' \
+            else self.__download_one_xbrl__(cf_fr_row)
+
+    def __download_one_json__(self, cf_fr_row):
+        ''' just download & no pre-processibg. All error checks are done during pre-processing '''
+        json_key = cf_fr_row['json_key']
         period_end = datetime.strptime(cf_fr_row['toDate'], '%d-%b-%Y').strftime('%Y-%m-%d')
 
-        ''' Step 1: download json_data from json_url & add it to json_archive '''
-        json_url = self.json_base_url + key
-        json_download_outcome = {'json_outcome': False, 'json_size': 0,
-                                 'json_archive_path': None, 'json_error': ''}
+        json_link = self.base_url_json + json_key
+        json_download_outcome = {
+            'json_outcome': False, 'json_size': 0, 'json_archive_path': None, 'json_error': ''
+        }
         try:
-            json_data, raw_data = self.http_obj.http_get_both(json_url)
-            json_archive_file_name = '%d/json_period_end_%s' % (int(period_end[0:4]), period_end)
-            if period_end not in self.json_archives.keys():
-                f = os.path.join(PATH_2, json_archive_file_name)
+            json_data, raw_data = self.http_obj.http_get_both(json_link)
+            json_archive_path = '%d/json_data_period_end_%s' % (int(period_end[0:4]), period_end)
+            if period_end not in self.json_data_archives.keys():
+                f = os.path.join(PATH_2, json_archive_path)
                 update = os.path.exists(f)
-                self.json_archives[period_end] = archiver.Archiver(f, mode='w', update=update)
-            self.json_archives[period_end].add(key, raw_data)
+                self.json_data_archives[period_end] = archiver.Archiver(f, mode='w', update=update)
+            self.json_data_archives[period_end].add(json_key, raw_data)
 
             json_download_outcome['json_outcome'] = True
             json_download_outcome['json_size'] = len(raw_data)
-            json_download_outcome['json_archive_path'] = json_archive_file_name
+            json_download_outcome['json_archive_path'] = json_archive_path
         except Exception as e:
             err_msg = 'http_get_both failed %s\n%s' % (e, traceback.format_exc())
             json_download_outcome['json_error'] = err_msg
             self.session_errors += 1
-            ''' should we return here? not sure. '''
 
-        ''' Step 2: download xbrl_data from xbrl_linl & add it to xbrl_archive'''
+        self.dl_md_json[json_key] = {
+            'symbol': cf_fr_row['symbol'],
+            'json_key': json_key,
+            'json_outcome': json_download_outcome['json_outcome'],
+            'json_size': json_download_outcome['json_size'],
+            'json_archive_path': json_download_outcome['json_archive_path'],
+            'json_error': json_download_outcome['json_error'],
+            'timestamp': self.timestamp,
+            'json_link': json_link
+        }
+
+        return  json_download_outcome['json_outcome']
+
+    def __download_one_xbrl__(self, cf_fr_row):
+        ''' just download & no pre-processibg. All error checks are done during pre-processing '''
         xbrl_link = cf_fr_row['xbrl']
-        xbrl_download_outcome = {'xbrl_outcome': False, 'xbrl_size': 0,
-                                 'xbrl_archive_path': None, 'xbrl_error': ''}
-        if os.path.basename(xbrl_link) == '-':
-            xbrl_download_outcome['xbrl_error'] = 'invalid xbrl ink: [%s]' % xbrl_link
+        xbrl_key = os.path.basename(xbrl_link)
+        period_end = datetime.strptime(cf_fr_row['toDate'], '%d-%b-%Y').strftime('%Y-%m-%d')
+
+        xbrl_download_outcome = {
+            'xbrl_outcome': False, 'xbrl_size': 0, 'xbrl_archive_path': None, 'xbrl_error': ''
+        }
+        if xbrl_key == '-':
+            xbrl_download_outcome['xbrl_error'] = 'invalid xbrl_link: [%s]' % xbrl_link
         else:
             try:
                 xbrl_data = self.http_obj.http_get(xbrl_link)
                 if len(xbrl_data) == 0:
                     xbrl_download_outcome['xbrl_error'] = 'empty xbrl_data'
                 else:
-                    xbrl_archive_file_name = '%d/xbrl_period_end_%s' % (int(period_end[0:4]), period_end)
-                    if period_end not in self.xbrl_archives.keys():
-                        f = os.path.join(PATH_2, xbrl_archive_file_name)
+                    xbrl_archive_path = '%d/xbrl_data_period_end_%s' % (int(period_end[0:4]), period_end)
+                    if period_end not in self.xbrl_data_archives.keys():
+                        f = os.path.join(PATH_2, xbrl_archive_path)
                         update = os.path.exists(f)
-                        self.xbrl_archives[period_end] = archiver.Archiver(f, mode='w', update=update)
-                    self.xbrl_archives[period_end].add(xbrl_link, xbrl_data)
+                        self.xbrl_data_archives[period_end] = archiver.Archiver(f, mode='w', update=update)
+                    self.xbrl_data_archives[period_end].add(xbrl_key, xbrl_data)
 
                     xbrl_download_outcome['xbrl_outcome'] = True
                     xbrl_download_outcome['xbrl_size'] = len(xbrl_data)
-                    xbrl_download_outcome['xbrl_archive_path'] = xbrl_archive_file_name
+                    xbrl_download_outcome['xbrl_archive_path'] = xbrl_archive_path
             except Exception as e:
                 err_msg = 'http_get failed:\n%s\n%s' % (e, traceback.format_exc())
                 xbrl_download_outcome['xbrl_error'] = err_msg
+                self.session_errors += 1
 
-        ''' Step 3: store mininum info here. '''
-        ''' Final metadata is prepared during processing & stored in a metadata_{year}.csv '''
-        self.download_metadata[key] = {
+        self.dl_md_xbrl[xbrl_key] = {
             'symbol': cf_fr_row['symbol'],
-            'download_timestamp': self.timestamp,
-            'key': key,
-            'json_url': json_url,
-            'json_outcome': json_download_outcome['json_outcome'],
-            'json_size': json_download_outcome['json_size'],
-            'json_archive_path': json_archive_file_name,
-            'json_error': json_download_outcome['json_error'],
-            'xbrl_link': cf_fr_row['xbrl'],
+            'xbrl_key': xbrl_key,
             'xbrl_outcome': xbrl_download_outcome['xbrl_outcome'],
             'xbrl_size': xbrl_download_outcome['xbrl_size'],
             'xbrl_archive_path': xbrl_download_outcome['xbrl_archive_path'],
-            'xbrl_error': xbrl_download_outcome['xbrl_error']
+            'xbrl_error': xbrl_download_outcome['xbrl_error'],
+            'timestamp': self.timestamp,
+            'xbrl_link': xbrl_link
         }
 
-        return  json_download_outcome['json_outcome']
+        return  xbrl_download_outcome['xbrl_outcome']
 
-    def flush_all(self):
-        for k in self.json_archives.keys():
-            self.json_archives[k].flush(create_parent_dir=True)
-
-        for k in self.xbrl_archives.keys():
-            self.xbrl_archives[k].flush(create_parent_dir=True)
-
-        df = pd.DataFrame(list(self.download_metadata.values()))
-        df.sort_values(by='download_timestamp', inplace=True)
-        df.to_csv(self.downloaded_data_filename, index=False)
-
-        self.json_archives.clear()
-        self.xbrl_archives.clear()
+    def __flush__(self, mode):
+        assert mode in ['json', 'xbrl']
+        if mode == 'json':
+            for k in self.json_data_archives.keys():
+                self.json_data_archives[k].flush(create_parent_dir=True)
+            df = pd.DataFrame(list(self.dl_md_json.values()))
+            df.sort_values(by='timestamp', inplace=True)
+            Path(os.path.dirname(self.dl_md_filename_json)).mkdir(parents=False, exist_ok=True)
+            df.to_csv(self.dl_md_filename_json, index=False)
+            self.json_data_archives.clear()
+        elif mode == 'xbrl':
+            for k in self.xbrl_data_archives.keys():
+                self.xbrl_data_archives[k].flush(create_parent_dir=True)
+            df = pd.DataFrame(list(self.dl_md_xbrl.values()))
+            df.sort_values(by='timestamp', inplace=True)
+            Path(os.path.dirname(self.dl_md_filename_xbrl)).mkdir(parents=False, exist_ok=True)
+            df.to_csv(self.dl_md_filename_xbrl, index=False)
+            self.xbrl_data_archives.clear()
+        else:
+            assert False, mode
 
         return True
+
+    def __what_to_download__(self, mode):
+        f = os.path.join(PATH_1, 'CF_FR_%d.csv' % self.year)
+        to_download = pd.read_csv(f)
+        print('Loaded %s, shape %s' % (os.path.basename(f), to_download.shape))
+
+        if mode == 'json':
+            to_download['json_key'] = to_download.apply(lambda x: base_utils.prepare_json_key(x), axis=1)
+            if os.path.exists(self.dl_md_filename_json):
+                df = pd.read_csv(self.dl_md_filename_json)
+                print('Loaded %s, shape %s' % (os.path.basename(self.dl_md_filename_json), df.shape))
+                self.dl_md_json = dict(zip(df['json_key'], df.to_dict('records')))
+                to_download = to_download.loc[~to_download['json_key'].isin(df['json_key'].unique())]
+        elif mode == 'xbrl':
+            to_download['xbrl_key'] = to_download.apply(lambda x: os.path.basename(x['xbrl']), axis=1)
+            if os.path.exists(self.dl_md_filename_xbrl):
+                df = pd.read_csv(self.dl_md_filename_xbrl)
+                print('Loaded %s, shape %s' % (os.path.basename(self.dl_md_filename_xbrl), df.shape))
+                self.dl_md_xbrl = dict(zip(df['xbrl_key'], df.to_dict('records')))
+                to_download = to_download.loc[~to_download['xbrl_key'].isin(df['xbrl_key'].unique())]
+
+        to_download.reset_index(drop=True, inplace=True)
+        return to_download
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
@@ -180,6 +242,5 @@ if __name__ == '__main__':
           (args.y, args.sy, args.md, args.v))
 
     year = datetime.today().year if args.y is None else int(args.y)
-    n_downloads = 1000 if args.md is None else args.md
     mgr = DownloadManagerNSE(year=year, verbose=args.v)
-    mgr.download(max_downloads=n_downloads)
+    mgr.download(max_downloads=args.md)
