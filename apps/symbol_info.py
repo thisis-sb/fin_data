@@ -6,7 +6,6 @@ Average closing price of stock around a particular date or between 2 dates
 from fin_apps.env import *
 import sys
 from datetime import datetime, timedelta
-import numpy as np
 from fin_data.common import nse_symbols
 from fin_data.nse_pv import nse_spot
 
@@ -23,7 +22,7 @@ def average_price(args):
             for se in df['Series'].unique():
                 x = df.loc[df['Series'] == se]
                 print('    %s: %s to %s' % (se, x['Date'].values[0], x['Date'].values[-1]))
-            f = os.path.join(LOG_DIR, 'nse_avgprice.py.csv')
+            f = os.path.join(LOG_DIR, 'symbol_info.py.csv')
             df.to_csv(f, index=False)
             print('==> PV data saved in: %s' % f)
         else:
