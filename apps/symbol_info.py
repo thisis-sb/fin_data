@@ -6,7 +6,7 @@ Average closing price of stock around a particular date or between 2 dates
 from fin_apps.env import *
 import sys
 from datetime import datetime, timedelta
-from fin_data.common import nse_symbols
+from fin_data.common import nse_symbols, nse_cf_ca
 from fin_data.nse_pv import nse_spot
 
 def average_price(args):
@@ -66,8 +66,9 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     arg_parser = ArgumentParser()
     arg_parser.add_argument("-sy", help="nse symbol")
-    arg_parser.add_argument('-ap', action='store_true', help="average price")
-    arg_parser.add_argument('-sc', action='store_true', help="symbol changes for symbol (args.sy)")
+    arg_parser.add_argument('-ap', action='store_true', help="average closing price")
+    arg_parser.add_argument('-ca', action='store_true', help="corporate actions history")
+    arg_parser.add_argument('-sc', action='store_true', help="symbol changes")
     arg_parser.add_argument('-t', action='store_true', help="Test")
     arg_parser.add_argument('-ds', help="start date (YYYY-MM-DD)")
     arg_parser.add_argument('-de', help="end   date (YYYY-MM-DD)")
@@ -80,9 +81,19 @@ if __name__ == '__main__':
 
     if args.t:
         test_me()
-    elif args.sc and args.sy is not None:
-        symbol_changes(args.sy)
     elif args.ap and args.sy is not None:
         average_price(args)
+    elif args.ca and args.sy is not None:
+        cutoff_date = '2018-01-01'
+        nse_ca_obj = nse_cf_ca.NseCorporateActions()
+        xx = nse_ca_obj.get_history(args.sy, cutoff_date=cutoff_date, prettyprint=True)
+        print('\n%s: Coporate Action History:\n%s\n%s\n%s' % (args.sy, 80*'-', xx, 80*'-'))
+        xx = nse_ca_obj.get_cf_ca_multipliers(args.sy, cutoff_date=cutoff_date)
+        if xx.shape[0] > 0:
+            print('\n\n%s: CF_CA Multipliers\n%s' %
+                  (args.sy,  xx[['Ex Date', 'MULT']].to_string(index=False))
+                  )
+    elif args.sc and args.sy is not None:
+        symbol_changes(args.sy)
     else:
         arg_parser.print_help()

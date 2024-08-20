@@ -1,6 +1,5 @@
 """
 Download MF NAV files from AMFI website
-Usage: dd-mmm-yyyy [dd-mmm-yyyy ...]
 """
 ''' --------------------------------------------------------------------------------------- '''
 
@@ -8,15 +7,14 @@ from fin_data.env import *
 import os
 import sys
 import pandas as pd
-from datetime import datetime, timedelta
-
-OUT_DIR = os.path.join(DATA_ROOT, '09_amfi')
+from datetime import date, timedelta
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_raw_amfi_data(last_date):
-    date_from = (datetime.strptime(last_date, '%d-%b-%Y') - timedelta(days=4)).strftime('%d-%b-%Y')
+def get_raw_amfi_data(as_on_date):
+    date_from = as_on_date - timedelta(days=7)
     url_base = 'https://portal.amfiindia.com/DownloadNAVHistoryReport_Po.aspx'
-    url = f'{url_base}?frmdt=%s&todt=%s' % (date_from, last_date)
+    url = f'{url_base}?frmdt=%s&todt=%s' % (date_from.strftime('%d-%b-%Y'),
+                                            as_on_date.strftime('%d-%b-%Y'))
 
     df = pd.read_csv(url, sep=';')
     assert df.shape[0] > 0, print('ERROR! get_raw_amfi_data: No raw data retrieved')
@@ -34,24 +32,31 @@ def get_raw_amfi_data(last_date):
 
     return df
 
+def eom_dates(year):
+    dates = []
+    for m in range(2,13):
+        dates.append(date(year, m, 1) - timedelta(1))
+    dates.append(date(year+1, 1, 1) - timedelta(1))
+    dates = [d for d in dates if d <= date.today()]
+    return dates
+
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    assert len(sys.argv) > 1, '\n\nERROR! At-least one date in dd-mmm-yyyy format required'
-    dates = sys.argv[1:]
+    from argparse import ArgumentParser
 
-    print()
-    for date in dates:
-        print('Downloading AMFI NAVs for:', date, end=' ... ')
-        sys.stdout.flush()
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('-y', type=int, default=date.today().year, help="calendar year")
+    args = arg_parser.parse_args()
 
-        raw_navs = get_raw_amfi_data(date)
+    dates = eom_dates(args.y)
 
-        year  = str(datetime.strptime(date, '%d-%b-%Y').year)
-        month = int(datetime.strptime(date, '%d-%b-%Y').month)
-        day   = int(datetime.strptime(date, '%d-%b-%Y').day)
-        month = f'{month}' if month > 9 else f'0{month}'
-        day   = f'{day}' if day > 9 else f'0{day}'
-
-        os.makedirs(OUT_DIR, exist_ok=True)
-        raw_navs.to_csv(os.path.join(OUT_DIR, f'navs-{year}/navs-{year}-{month}-{day}.csv'), index=False)
-        print('Done & Saved')
+    for d in dates:
+        print('  navs for %s:' % d.strftime('%d-%b-%Y'), end=' ')
+        f = os.path.join(DATA_ROOT, '09_amfi/%d/%s.csv' % (d.year, d.strftime('%Y-%m-%d')))
+        if os.path.isfile(f):
+            print('already exists.')
+        else:
+            raw_navs = get_raw_amfi_data(d)
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            raw_navs.to_csv(f, index=False)
+            print('downloaded & saved. shape:', raw_navs.shape)

@@ -340,15 +340,6 @@ def download_cf_shp(year):
         print('Done. cf_shp_df.shape:', cf_shp_df.shape)
     return
 
-def last_n_pe_dates(n, last_period=None):
-    end_date_str = date.today().strftime('%Y-%m-%d') if last_period is None else last_period
-    pe_dates = []
-    for yr in range(2018, datetime.strptime(end_date_str, '%Y-%m-%d').year + 1):
-        for dt in ['%d-03-31' % yr, '%d-06-30' % yr, '%d-09-30' % yr, '%d-12-31' % yr]:
-            if dt <= end_date_str:
-                pe_dates.append(dt)
-    return pe_dates[-n:]
-
 def get_all(full=False, verbose=False):
     get_all_symbols()
     if full: get_all_indices()
@@ -370,7 +361,6 @@ if __name__ == '__main__':
 
     if args.y is None:
         get_all(full=args.f)
-        print('Last 6 pe_dates:', last_n_pe_dates(6))
     else:
         print('Downloading CF_CA & CF_SHP for years:', args.y)
         if args.ca is False and args.shp is False:
