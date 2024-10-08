@@ -16,11 +16,14 @@ from pygeneric.datetime_utils import elapsed_time, remove_timers
 
 ''' --------------------------------------------------------------------------------------- '''
 def test_nse_spot(verbose=False):
+    print('\nfin_data.apps.test_all.test_nse_spot:')
+    print(80 * '-')
+
     elapsed_time('test_nse_spot_0')
     import fin_data.nse_pv.get_hpv as get_hpv
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting NseSpotPVData basics ...')
+    print('NseSpotPVData basics:')
     symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
                'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=False)
@@ -53,7 +56,7 @@ def test_nse_spot(verbose=False):
         return
 
     def check_data(symbol_list, dates):
-        print('Checking for dates', dates, '...', end=' ')
+        print(f'  Checking for {dates}:', dates, end=' ')
         for symbol in symbol_list:
             if verbose: print(f'\n  {symbol} ...', end=' ')
             df1 = nse_spot_obj.get_pv_data(symbol, series='EQ', from_to=dates)
@@ -73,7 +76,7 @@ def test_nse_spot(verbose=False):
     check_data(symbols, ['2024-01-01', end_date])
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting NseSpotPVData().get_pv_data (for multiple symbols) ...', end=' ')
+    print('NseSpotPVData.get_pv_data (for multiple symbols):', end=' ')
     """ To do: Verify 52_Wk_H/L"""
     multi_df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', end_date])
     for symbol in symbols:
@@ -85,7 +88,7 @@ def test_nse_spot(verbose=False):
     print('') if verbose else print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting get_index_pv_data ... ', end='')
+    print('NseSpotPVData.get_index_pv_data:', end=' ')
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', '2023-05-02'])
     assert pv_data.shape[0] == 18 and pv_data.shape[1] == 13
     pv_data = nse_spot_obj.get_index_pv_data('NIFTY 50', ['2023-04-01', None])
@@ -97,7 +100,7 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting get_etf_pv_data ... ', end='')
+    print('NseSpotPVData.get_etf_pv_data:', end=' ')
     pv_data = nse_spot_obj.get_etf_pv_data('NIFTYBEES', ['2023-04-01', '2023-05-02'])
     assert pv_data.shape[0] == 18 and pv_data.shape[1] == 17, pv_data.shape
     pv_data = nse_spot_obj.get_etf_pv_data('NIFTYBEES', ['2023-04-01', None])
@@ -107,7 +110,7 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting get_spot_quote ... ', end='')
+    print('NseSpotPVData.get_spot_quote:', end=' ')
     keys  = ['Symbol', 'Series', 'Date', 'epoch', 'Open', 'High', 'Low', 'Close',
              'previousClose', 'lastPrice', 'pChange']
     assert list(nse_spot.get_spot_quote('ASIANPAINT').keys()) == keys
@@ -117,7 +120,7 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting for partly paid symbol ...', end=' ')
+    print('NseSpotPVData.get_pv_data (for partly paid symbol):.', end=' ')
     df_pp = nse_spot_obj.get_pv_data('AIRTELPP', series='E1', from_to=['2022-10-01', '2022-10-10'])
     assert df_pp.shape[0] == 5, 'partly paid Not OK'
     df_pp = nse_spot_obj.get_pv_data(['BHARTIARTL', 'AIRTELPP'], from_to=['2022-10-01', '2022-10-10'])
@@ -127,15 +130,15 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting for NseSpotPVData().get_pv_data (for large # of multiple symbols) ...')
+    print('NseSpotPVData.get_pv_data (for large # of multiple symbols):')
     elapsed_time(0)
     import fin_data.common.nse_symbols as nse_symbols
     symbols = nse_symbols.get_symbols(['NIFTY 50', 'NIFTY NEXT 50'])
     df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', None], verbose=True)
-    print('Done. time check:', elapsed_time(0), 'seconds\n')
+    print('OK. time check:', elapsed_time(0), 'seconds\n')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting for NseSpotPVData().get_pv_data (for same symbol, different series) ...')
+    print('NseSpotPVData.get_pv_data (for same symbol, different series):', end=' ')
     ''' TO DO: Need a better solution (for current ones & not discontinued)'''
     assert nse_spot_obj.get_pv_data('HDFC', series='EQ', from_to=['2023-05-12', None])['Close'].values[0] == 2776.3
     assert nse_spot_obj.get_pv_data('HDFC', series='W3', from_to=['2023-05-12', None])['Close'].values[0] == 560.55
@@ -144,7 +147,7 @@ def test_nse_spot(verbose=False):
     print('OK')
 
     ''' ----------------------------------------------------------------------------------- '''
-    print('\nTesting for NseSpotPVData().get_avg_closing_price ...')
+    print('NseSpotPVData.get_avg_closing_price:', end=' ')
     res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2021-12-31')
     assert abs(res[2] - 3425.62) < 0.1, 'ERROR! %s Unexpected average value' % res
     res = nse_spot_obj.get_avg_closing_price('ASIANPAINT', '2022-12-31')
@@ -153,69 +156,80 @@ def test_nse_spot(verbose=False):
     assert abs(res[2] - 2784.44) < 0.1, 'ERROR! %s Unexpected average value' % res
     print('OK')
 
-    print('test_nse_spot: total time taken: %.2f' % elapsed_time('test_nse_spot_0'))
-    remove_timers('test_nse_spot_0')
+    t = elapsed_time('test_nse_spot_0')
+    print('\nNseSpotPVData tests total time: %.2f' % t)
+    print(80 * '-')
 
-    return True
+    return True, t
 
 def test_perf_nse_pv(verbose=False):
-    print('\nStarting test_perf_nse_pv :::')
-    print('Testing NseSpotPVData() ...')
+    print('\nfin_data.apps.test_me.test_perf_nse_pv:')
+    print(80 * '-')
+
     elapsed_time(['tpnp_0', 'tpnp_1'])
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=verbose)
     print('Step1: initialization: %.2f' % elapsed_time('tpnp_1'))
 
-    for dt in ['2021-01-01', '2018-01-01']:
+    dates_from = [(datetime.today()-timedelta(1*365)).strftime('%Y-%m-%d'),
+                  (datetime.today()-timedelta(3*365)).strftime('%Y-%m-%d')]
+
+    for dt in dates_from:
         symbols = nse_symbols.get_symbols(['NIFTY 50'])
-        print('\nRunning Step2 for date:', dt, '...')
-        for i in range(0, 5):
+        print('\nStep2 for date:', dt, '...')
+        for i in range(3):
             one_symbol = random.choice(symbols)
             elapsed_time('tpnp_1')
             df = nse_spot_obj.get_pv_data(one_symbol, from_to=[dt, None], verbose=verbose)
-            print('  Step2: get_pv_data: [%s] since [%s]: shape: %s, time taken: %.2f'
-                  % (one_symbol, dt, df.shape, elapsed_time('tpnp_1')))
+            print('  get_pv_data: %s: %d rows (%.2f sec)'
+                  % (one_symbol, df.shape[0], elapsed_time('tpnp_1')))
 
-        print('Running Step3 for date:', dt, '...')
-        n_few_symbols = 0
-        for i in range(0,5):
-            n_few_symbols += 10
-            few_symbols = [random.choice(symbols) for x in range(0, n_few_symbols)]
+        print('Step3 for date:', dt, '...')
+        for i in range(3):
+            few_symbols = random.sample(symbols, (i + 1) * 10)
             elapsed_time('tpnp_1')
             df = nse_spot_obj.get_pv_data(few_symbols, from_to=[dt, None], verbose=verbose)
-            print('  Step3: get_pv_data: %d symbols since [%s]: shape: %s, time taken: %.2f'
-                  % (len(few_symbols), dt, df.shape, elapsed_time('tpnp_1')))
+            print('  get_pv_data: %d symbols: %d rows (%.2f sec)'
+                  % (len(few_symbols), df.shape[0], elapsed_time('tpnp_1')))
 
         elapsed_time('tpnp_1')
-        print('Running Step4 for date:', dt, '...')
-        for ix in ['NIFTY 50', 'NIFTY 100', 'NIFTY MIDCAP 150',
-                   'NIFTY SMALLCAP 250', 'NIFTY TOTAL MARKET']:
+        print('Step4 for date:', dt, '...')
+        for ix in ['NIFTY 50', 'NIFTY 500', 'NIFTY TOTAL MARKET']:
             symbols = nse_symbols.get_symbols([ix])
             df = nse_spot_obj.get_pv_data(symbols, from_to=[dt, None], verbose=verbose)
-            print('  Step4: get_pv_data: [%s] since [%s]: shape: %s, time taken: %.2f'
-                  % (ix, dt, df.shape, elapsed_time('tpnp_1')))
+            print('  get_pv_data: %s: %d rows (%.2f sec)'
+                  % (ix, df.shape[0], elapsed_time('tpnp_1')))
 
-    print('Step5: Testing 100 calls to get_avg_closing_price: ', end=' ')
-    symbols = nse_symbols.get_symbols(['NIFTY 500'], series='EQ')
+    print('\nStep5: Testing 50 calls to get_avg_closing_price:', end=' ')
+    symbols = nse_symbols.get_symbols(['NIFTY 100'], series='EQ')
     elapsed_time('tpnp_1')
-    for i in range(100):
-        s = random.choice(symbols)
+    select_symbols = random.sample(symbols, 50)
+    for s in select_symbols:
         try:
             _ = nse_spot_obj.get_avg_closing_price(s, mid_point='2024-01-15')
         except Exception as e:
-            print('  For %s, ERROR: %s' % (s, e))
-    print('total time: %.2f' % elapsed_time('tpnp_1'))
+            print('\n    %s: ERROR: %s' % (s, e))
+    print('time: %.2f sec' % elapsed_time('tpnp_1'))
 
-    print('test_nse_spot: total time taken: %.2f' % elapsed_time('tpnp_0'))
+    t = elapsed_time('tpnp_0')
+    print('test_nse_spot: total time taken: %.2f' % t)
+    print(80 * '-')
     remove_timers(['tpnp_0', 'tpnp_1'])
 
-    return
+    return True, t
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
     assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
     assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
-    test_nse_spot()
-    test_perf_nse_pv()
-    base_utils.test_me()
 
-    print('\n>>>>>>>>>> For detailed tests of ind_cf: See fin_apps <<<<<<<<<<')
+    test_outcomes = {}
+    test_outcomes['test_nse_spot'] = test_nse_spot()
+    test_outcomes['test_perf_nse_pv'] = test_perf_nse_pv()
+    test_outcomes['base_utils'] = base_utils.test_me()
+
+    print('\nfin_data.test_all outcome:\n%s' % (40 * '-'))
+    for k in test_outcomes.keys():
+        assert test_outcomes[k][0]
+        print('%-20s %5.1f s' % (k, test_outcomes[k][1]))
+    print('%-20s %5.1f s' % ('total time', sum([t[1] for t in test_outcomes.values()])))
+    print(40 * '-')

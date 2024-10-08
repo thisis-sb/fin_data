@@ -151,7 +151,7 @@ def test_me(verbose=False):
     t = elapsed_time('fin_data.ind_cf.base_utils.test_me.0')
     print('OK (%.2f)' % t)
 
-    return True
+    return True, t
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':

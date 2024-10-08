@@ -96,6 +96,7 @@ class NseCorporateActions:
         return ca_df[['Symbol', 'Ex Date', 'MULT', 'Purpose']]
 
 def test_me():
+    print('fin_data.common.nse_cf_ca.test_me:', end=' ')
     test_dates = ['2018-01-01', '2023-03-31']
     test_data = {
         'BRITANNIA': {'Ex Date': ['2018-11-29'], 'MULT': [2.0]},
@@ -109,7 +110,6 @@ def test_me():
     }
 
     nse_ca_obj = NseCorporateActions()
-    print('\nTesting nse_cf_ca ...', end=' ')
     for symbol in test_data.keys():
         x1 = nse_ca_obj.get_cf_ca_multipliers(symbol, cutoff_date=test_dates[0])
         x1 = x1.loc[x1['Ex Date'] <= test_dates[1]]

@@ -50,7 +50,7 @@ def get_isin(symbol):
 
 ''' --------------------------------------------------------------------------------------- '''
 def test_me():
-    print('\nTesting nse_symbols ... ')
+    print('fin_data.common.nse_symbols.test_me:', end=' ')
 
     if len(get_symbols(['NIFTY 50'])) != 50 or len(get_symbols(['NIFTY 100'])) != 100 or \
             len(get_symbols(['NIFTY 50', 'NIFTY 100'])) != 100:
@@ -86,7 +86,8 @@ def test_me():
     assert get_older_symbols('LTIM') == ['LTI']
 
     assert get_isin('ZYDUSLIFE') == 'INE010B01027'
-    print('Testing nse_symbols ... OK')
+    print('OK')
+
     return True
 
 ''' --------------------------------------------------------------------------------------- '''
