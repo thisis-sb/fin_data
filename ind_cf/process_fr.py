@@ -83,12 +83,12 @@ class ProcessCFFRs:
             xbrl_balance_sheet = False
             if xbrl_data is not None:
                 try:
-                    parsed_results = base_utils.parse_xbrl_fr(xbrl_data)
+                    parsed_results = base_utils.parse_xbrl_data(xbrl_data)
                     xbrl_balance_sheet = parsed_results['balance_sheet']
                     # Might need to do some sanity checks here (fe, symbol, isin, etc.)
                 except Exception as e:
                     row_dict['xbrl_outcome'] = False
-                    row_dict['xbrl_error'] = 'parse_xbrl_fr failed (1):\n%s\n%s' % (e, traceback.format_exc())
+                    row_dict['xbrl_error'] = 'parse_xbrl_data failed (1):\n%s\n%s' % (e, traceback.format_exc())
 
             # Not clear/TO DO/TO THINK: Use json_key or just add to list?
             self.final_metadata[row_dict['json_key']] = {
@@ -232,7 +232,7 @@ if __name__ == '__main__':
         xbrl_data = HttpDownloads().http_get(args.url)
         assert len(xbrl_data) > 0, 'ERROR, empty XBRL data'
 
-        parsed_result = base_utils.parse_xbrl_fr(xbrl_data)
+        parsed_result = base_utils.parse_xbrl_data(xbrl_data)
         [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
         df = parsed_result['parsed_df']
         df.to_csv(os.path.join(LOG_DIR, 'parsed_df_%s.csv' % parsed_result['NSE Symbol']), index=False)

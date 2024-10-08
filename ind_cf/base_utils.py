@@ -10,7 +10,7 @@ import sys
 import pandas as pd
 import requests
 import xml.etree.ElementTree as ElementTree
-import pygeneric.fin_utils as pyg_fin_utils
+from pygeneric.fin_utils import ind_fy_and_qtr
 
 ''' --------------------------------------------------------------------------------------- '''
 def prepare_json_key(row):
@@ -27,22 +27,29 @@ def prepare_json_key(row):
            '&industry=%s&frOldNewFlag=%s' % (industry, oldNewFlag) + \
            '&ind=%s&format=%s' % (reInd, format_x)
 
-def parse_xbrl_fr(xbrl_str, corrections=None):
-    df = pd.DataFrame(columns=['tag', 'context'])
-    root = ElementTree.fromstring(xbrl_str)
-    for item in root:
-        if item.tag.startswith('{http://www.bseindia.com/xbrl/fin/'):
-            tag = item.tag.split('}')[1]
-            '''print(child.attrib['contextRef'])'''
-            context = item.attrib['contextRef']  # this should always be there
+def parse_xbrl_data(xbrl_data, xbrl_df=None, corrections=None):
+    if xbrl_data is not None:  # xbrl_data has primacy
+        df = pd.DataFrame(columns=['tag', 'context'])
+        root = ElementTree.fromstring(xbrl_data)
+        for item in root:
+            if item.tag.startswith('{http://www.bseindia.com/xbrl/fin/'):
+                tag = item.tag.split('}')[1]
+                '''print(child.attrib['contextRef'])'''
+                context = item.attrib['contextRef']  # this should always be there
 
-            if tag.find('Disclosure') != -1: continue
+                if tag.find('Disclosure') != -1: continue
 
-            if not ((df['tag'] == tag) & (df['context'] == context)).any():  # add not already
-                df.loc[len(df.index)] = {'tag': tag, 'context': context}
+                if not ((df['tag'] == tag) & (df['context'] == context)).any():  # add not already
+                    df.loc[len(df.index)] = {'tag': tag, 'context': context}
 
-            idx = df[(df['tag'] == tag) & (df['context'] == context)].index[0]
-            df.at[idx, 'value'] = item.text
+                idx = df[(df['tag'] == tag) & (df['context'] == context)].index[0]
+                df.at[idx, 'value'] = item.text
+        df1 = df.copy()
+    elif xbrl_data is None and xbrl_df is not None:
+        df = xbrl_df.copy()
+        df1 = None
+    else:
+        assert False, 'ERROR! base_utils.parse_xbrl_data: invalid combination'
 
     if corrections is not None:
         for corr in corrections:
@@ -93,7 +100,7 @@ def parse_xbrl_fr(xbrl_str, corrections=None):
         'ISIN': ISIN,
         'period_start': period_start,
         'period_end': period_end,
-        'fy_and_qtr': pyg_fin_utils.ind_fy_and_qtr(period_end),
+        'fy_and_qtr': ind_fy_and_qtr(period_end),
         'reporting_qtr': df.loc[df['tag'] == 'ReportingQuarter', 'value'].values[0],
         'result_type': result_type,
         'result_format': result_format,
@@ -101,40 +108,52 @@ def parse_xbrl_fr(xbrl_str, corrections=None):
         'balance_sheet':balance_sheet,
         'company_name': company_name,
         'outcome': True,  # for now, later work on this
+        'xbrl_df': df1,
         'parsed_df': df
     }
 
     return result
 
+def test_me(verbose=False):
+    print('\nfin_data.ind_cf.base_utils.test_me:', end=' ')
+    import json
+    from pygeneric import archiver_cache
+    from pygeneric.datetime_utils import elapsed_time
+
+    test_data = pd.read_excel(os.path.join(CONFIG_ROOT, '03_fin_data.xlsx'), sheet_name='test_data')
+    test_data = test_data.loc[test_data['module'] == 'ind_cf.base_utils'].\
+        dropna(subset=['module', 'symbol']).reset_index(drop=True).to_dict('records')
+
+    PATH_1 = os.path.join(DATA_ROOT, '02_ind_cf/02_nse_fr_archive')
+    md_files = glob.glob(os.path.join(PATH_1, 'metadata_*.csv'))
+    meta_data = pd.concat([pd.read_csv(f) for f in md_files])
+    def xbrl_archive_path_func(xbrl_key):
+        _xx = meta_data.loc[meta_data['xbrl_key'] == xbrl_key, 'xbrl_archive_path']
+        return None if _xx.shape[0] == 0 else os.path.join(PATH_1, _xx.values[0])
+    ac_xbrl = archiver_cache.ArchiverCache(xbrl_archive_path_func, cache_size=5)
+
+    elapsed_time('fin_data.ind_cf.base_utils.test_me.0')
+    for tc in test_data:
+        tc_inp = json.loads(tc['test_input'])
+        xbrl_data = ac_xbrl.get_value(tc_inp['xbrl_key'])
+        pr1 = parse_xbrl_data(xbrl_data=xbrl_data, xbrl_df=None, corrections=None)
+        parsed_df = pr1['parsed_df']
+        xbrl_df   = pr1['xbrl_df']
+        pr1.pop('parsed_df')
+        pr1.pop('xbrl_df')
+        pr2 = parse_xbrl_data(xbrl_data=None, xbrl_df=xbrl_df, corrections=None)
+        assert parsed_df.equals(pr2['parsed_df'])
+        assert pr2['xbrl_df'] is None
+        pr2.pop('parsed_df')
+        pr2.pop('xbrl_df')
+        assert pr1 == pr2
+
+    t = elapsed_time('fin_data.ind_cf.base_utils.test_me.0')
+    print('OK (%.2f)' % t)
+
+    return True
+
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    urls = [
-        'https://archives.nseindia.com/corporate/xbrl/INDAS_782747_4705_20102022204936_WEB.xml',
-        'https://archives.nseindia.com/corporate/xbrl/NONINDAS_82817_609834_14022022021357_WEB.xml',
-        'https://nsearchives.nseindia.com/corporate/xbrl/INDAS_759407_5124_12102022203930_WEB.xml'
-    ]
-
-    for idx, url in enumerate(urls):
-        xbrl_data = get_xbrl(url)
-        assert len(xbrl_data) > 0, 'ERROR, empty xbrl_data'
-        parsed_result = parse_xbrl_fr(xbrl_data)
-        [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
-        parsed_result['parsed_df'].to_csv(
-            os.path.join(LOG_DIR, 'parsed_df_%s_%s.csv' % (idx, parsed_result['NSE Symbol'])))
-        print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
-        print()
-
-    ''' corrections '''
-    url = 'https://nsearchives.nseindia.com/corporate/xbrl/INDAS_759407_5124_12102022203930_WEB.xml'
-    corrs = [{'tag':'FaceValueOfEquityShareCapital', 'context':'OneD', 'value':'2'}]
-    idx = 99  # meh
-    xbrl_data = get_xbrl(url)
-    assert len(xbrl_data) > 0, 'ERROR, empty xbrl_data'
-    parsed_result = parse_xbrl_fr(xbrl_data, corrections=corrs)
-    [print('%s: %s' % (k, parsed_result[k])) for k in parsed_result.keys() if k != 'parsed_df']
-    parsed_result['parsed_df'].to_csv(
-        os.path.join(LOG_DIR, 'parsed_df_%s_%s.csv' % (idx, parsed_result['NSE Symbol'])))
-    print('parsed_df saved, shape:', parsed_result['parsed_df'].shape)
-    print()
-
-    print('All OK')
+    verbose = True
+    test_me(verbose=verbose)

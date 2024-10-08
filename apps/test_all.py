@@ -11,6 +11,7 @@ import pandas as pd
 import fin_data.nse_pv.nse_spot as nse_spot
 from fin_data.common import nse_config, nse_symbols, nse_cf_ca
 from fin_data.nse_pv import get_hpv, get_dr, process_dr, nse_spot
+from fin_data.ind_cf import base_utils
 from pygeneric.datetime_utils import elapsed_time, remove_timers
 
 ''' --------------------------------------------------------------------------------------- '''
@@ -215,5 +216,6 @@ if __name__ == '__main__':
     assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
     test_nse_spot()
     test_perf_nse_pv()
+    base_utils.test_me()
 
     print('\n>>>>>>>>>> For detailed tests of ind_cf: See fin_apps <<<<<<<<<<')
