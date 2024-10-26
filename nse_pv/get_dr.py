@@ -43,7 +43,7 @@ def nse_download_daily_reports(year_str, month_str):
     n_days = date_now.day \
         if (date_now.year == int(year_str) and date_now.month == months_dict[month_str]) else \
         monthrange(int(year_str), months_dict[month_str])[1]
-    print('\nDownloading for %s-%s: n_days: %d ...' % (year_str, month_str, n_days))
+    print('Downloading for %s-%s: n_days: %d ...' % (year_str, month_str, n_days))
 
     dest_folder = OUTPUT_DIR + '/%s/%s' % (year_str, f'{months_dict[month_str]}'.zfill(2))
     Path(dest_folder).mkdir(parents=True, exist_ok=True)

@@ -392,7 +392,7 @@ def get_52week_high_low(df):
 """
 
 def wrapper(year, verbose=False):
-    print(f'\nProcessing daily reports for year {year}...')
+    print(f'Processing daily reports for year {year}...')
     os.makedirs(os.path.join(PATH_2, f'{year}'), exist_ok=True)
 
     print('Removing existing files: ', end='')
