@@ -277,10 +277,10 @@ if __name__ == '__main__':
     from datetime import datetime
     from argparse import ArgumentParser
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("-s", action='store_true', help='show all errors for the year')
+    arg_parser.add_argument("-s", action='store_true', help='show all errors for all years')
     arg_parser.add_argument("-d", action='store_true', help='delete data for symbols in year')
     arg_parser.add_argument("-sy", nargs='+', help='nse symbols')
-    arg_parser.add_argument("-y", type=int, default=datetime.today().year, help='calendar year')
+    arg_parser.add_argument("-y", type=int, help='calendar year')
     args = arg_parser.parse_args()
 
     if args.s:
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         checks_3(archive_type='json')
         checks_3(archive_type='xbrl')
     elif args.d:
-        if args.sy is None or len(args.sy) == 0:
+        if args.sy is None or len(args.sy) == 0 or args.y is None:
             arg_parser.print_help()
             exit()
         delete_data(symbols=args.sy, year=args.y)
