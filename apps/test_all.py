@@ -17,7 +17,7 @@ from pygeneric.datetime_utils import elapsed_time, remove_timers
 ''' --------------------------------------------------------------------------------------- '''
 def test_nse_spot(verbose=False):
     print('\nfin_data.apps.test_all.test_nse_spot:')
-    print(80 * '-')
+    print(70 * '-')
 
     elapsed_time('test_nse_spot_0')
     import fin_data.nse_pv.get_hpv as get_hpv
@@ -158,13 +158,13 @@ def test_nse_spot(verbose=False):
 
     t = elapsed_time('test_nse_spot_0')
     print('\nNseSpotPVData tests total time: %.2f' % t)
-    print(80 * '-')
+    print(70 * '-')
 
     return True, t
 
 def test_perf_nse_pv(verbose=False):
     print('\nfin_data.apps.test_me.test_perf_nse_pv:')
-    print(80 * '-')
+    print(70 * '-')
 
     elapsed_time(['tpnp_0', 'tpnp_1'])
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=verbose)
@@ -212,24 +212,32 @@ def test_perf_nse_pv(verbose=False):
 
     t = elapsed_time('tpnp_0')
     print('test_nse_spot: total time taken: %.2f' % t)
-    print(80 * '-')
+    print(70 * '-')
     remove_timers(['tpnp_0', 'tpnp_1'])
 
     return True, t
 
+def test_me():
+    test_outcomes = {}
+    test_outcomes['nse_symbols.test_me'] = nse_symbols.test_me()
+    test_outcomes['nse_cf_ca.test_me']   = nse_cf_ca.test_me()
+    test_outcomes['test_nse_spot']       = test_nse_spot()
+    test_outcomes['test_perf_nse_pv']    = test_perf_nse_pv()
+    test_outcomes['base_utils.test_me']  = base_utils.test_me()
+
+    outcome_str = '\nSUMMARY:fin_data.apps.test_all outcome summary:\n%s' % (70 * '-')
+    for k in test_outcomes.keys():
+        assert test_outcomes[k][0], '%s failed' % test_outcomes[k]
+        outcome_str += '\n%-30s %-5s %5.1f s' % (k, test_outcomes[k][0], test_outcomes[k][1])
+    outcome_str += '\n%-30s %-5s %5.1f s' % ('time (TOTAL)',
+                                  all(t[0] for t in test_outcomes.values()),
+                                  sum([t[1] for t in test_outcomes.values()]))
+    outcome_str += ('\n' + 70 * '-')
+
+    print(outcome_str)
+
+    return True, outcome_str
+
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
-    assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
-
-    test_outcomes = {}
-    test_outcomes['test_nse_spot'] = test_nse_spot()
-    test_outcomes['test_perf_nse_pv'] = test_perf_nse_pv()
-    test_outcomes['base_utils'] = base_utils.test_me()
-
-    print('\nfin_data.test_all outcome:\n%s' % (40 * '-'))
-    for k in test_outcomes.keys():
-        assert test_outcomes[k][0]
-        print('%-20s %5.1f s' % (k, test_outcomes[k][1]))
-    print('%-20s %5.1f s' % ('total time', sum([t[1] for t in test_outcomes.values()])))
-    print(40 * '-')
+    assert test_me()[0]

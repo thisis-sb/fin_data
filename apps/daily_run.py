@@ -21,7 +21,7 @@ def e2e_nse_common(full):
     print(100 * '-')
     return
 
-def e2e_nse_pv(common_as_well=True):
+def e2e_nse_pv(common_as_well=True, run_tests=True):
     print('\n\nfin_data.apps.daily_rune2e_nse_pv:')
     print(100 * '-')
 
@@ -42,20 +42,21 @@ def e2e_nse_pv(common_as_well=True):
     get_hpv.wrapper()
     print("fin_data.nse_pv.get_hpv: COMPLETE")
 
-    print("\n\nTESTING nse_pv:")
-    print(100 * '-')
-    assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
-    assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
-    r, t = test_all.test_nse_spot()
-    assert r, 'ERROR! nse_spot.test_all FAILED'
-    print('test_all.test_nse_spot: time: %.1f sec' % t)
+    if run_tests:
+        print("\n\nTESTING nse_pv:")
+        print(100 * '-')
+        assert nse_symbols.test_me(), 'nse_symbols.test_me() failed'
+        assert nse_cf_ca.test_me(), 'nse_cf_ca.test_me() failed'
+        r, t = test_all.test_nse_spot()
+        assert r, 'ERROR! nse_spot.test_all FAILED'
+        print('test_all.test_nse_spot: time: %.1f sec' % t)
 
-    print("fin_data.apps.daily_run.e2e_nse_pv: COMPLETE.")
-    print(100 * '-')
+        print("fin_data.apps.daily_run.e2e_nse_pv: COMPLETE.")
+        print(100 * '-')
 
     return
 
-def e2e_ind_cf():
+def e2e_ind_cf(run_tests=True):
     print('\n\nfin_data.apps.daily_run.e2e_ind_cf:')
     print(100 * '-')
 
@@ -75,10 +76,11 @@ def e2e_ind_cf():
     process_fr.ProcessCFFRs(current_year).process()
     print("fin_data.ind_cf.process_fr: COMPLETE")
 
-    print("\n\nTESTING ind_cf:")
-    print(100 * '-', end='')
-    r, t = base_utils.test_me()
-    assert r, 'ERROR! base_utils.test_me FAILED'
+    if run_tests:
+        print("\n\nTESTING ind_cf:")
+        print(100 * '-', end='')
+        r, t = base_utils.test_me()
+        assert r, 'ERROR! base_utils.test_me FAILED'
 
     print("fin_data.apps.daily_run.e2e_ind_cf: COMPLETE.")
     print(100 * '-')

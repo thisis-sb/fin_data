@@ -8,6 +8,7 @@ import os
 import sys
 import glob
 import pandas as pd
+from pygeneric.datetime_utils import elapsed_time
 
 PATH_1 = os.path.join(DATA_ROOT, '00_common/01_nse_symbols')
 PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
@@ -51,6 +52,7 @@ def get_isin(symbol):
 ''' --------------------------------------------------------------------------------------- '''
 def test_me():
     print('fin_data.common.nse_symbols.test_me:', end=' ')
+    elapsed_time('fin_data.common.nse_symbols.test_me')
 
     if len(get_symbols(['NIFTY 50'])) != 50 or len(get_symbols(['NIFTY 100'])) != 100 or \
             len(get_symbols(['NIFTY 50', 'NIFTY 100'])) != 100:
@@ -88,7 +90,7 @@ def test_me():
     assert get_isin('ZYDUSLIFE') == 'INE010B01027'
     print('OK')
 
-    return True
+    return True, elapsed_time('fin_data.common.nse_symbols.test_me')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':

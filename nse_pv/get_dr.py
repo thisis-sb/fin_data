@@ -25,7 +25,7 @@ def get_files(sub_url, filenames, archive_full_path):
     for f in filenames:
         # url = '%s/%s/%s' % (NSE_ARCHIVES_URL, sub_url, f)
         url = os.path.join(NSE_ARCHIVES_URL, sub_url, f).replace('\\', '/')
-        r = requests.get(url, headers=http_utils.http_request_header(), stream=True)
+        r = requests.get(url, headers=http_utils.HttpDownloads().request_header, stream=True)
         if r.ok:
             n_downloaded += 1
             total_size += len(r.content)

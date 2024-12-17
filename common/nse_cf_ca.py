@@ -9,6 +9,7 @@ import os
 import sys
 import pandas as pd
 import re
+from pygeneric.datetime_utils import elapsed_time
 
 PATH_1 = os.path.join(DATA_ROOT, '00_common/03_nse_cf_ca')
 
@@ -97,6 +98,7 @@ class NseCorporateActions:
 
 def test_me():
     print('fin_data.common.nse_cf_ca.test_me:', end=' ')
+    elapsed_time('fin_data.common.nse_cf_ca.test_me')
     test_dates = ['2018-01-01', '2023-03-31']
     test_data = {
         'BRITANNIA': {'Ex Date': ['2018-11-29'], 'MULT': [2.0]},
@@ -117,7 +119,7 @@ def test_me():
         assert x2 == test_data[symbol], 'ERROR! cf_ca_multpliers not matching, %s/%s' \
                                         % (x2, test_data[symbol])
     print('OK')
-    return True
+    return True, elapsed_time('fin_data.common.nse_cf_ca.test_me')
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
