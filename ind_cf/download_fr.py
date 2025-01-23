@@ -207,6 +207,8 @@ class DownloadManagerNSE:
 
     def __what_to_download__(self, mode):
         f = os.path.join(PATH_1, 'CF_FR_%d.csv' % self.year)
+        if not os.path.exists(f):
+            return pd.DataFrame()
         to_download = pd.read_csv(f)
         print('Loaded %s, shape %s' % (os.path.basename(f), to_download.shape))
 

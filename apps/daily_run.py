@@ -39,8 +39,11 @@ def e2e_nse_pv(common_as_well=True, run_tests=True):
 
     print("\n\nfin_data.nse_pv.get_hpv:")
     print(100 * '-')
-    get_hpv.wrapper()
-    print("fin_data.nse_pv.get_hpv: COMPLETE")
+    try:
+        get_hpv.wrapper()
+        print("fin_data.nse_pv.get_hpv: COMPLETE")
+    except Exception as e:
+        print('ERROR! get_hpv.wrapper() BUT continuing! tests may fail!')
 
     if run_tests:
         print("\n\nTESTING nse_pv:")

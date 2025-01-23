@@ -16,24 +16,32 @@ from time import sleep
 import pygeneric.http_utils as http_utils
 
 OUTPUT_DIR = os.path.join(DATA_ROOT, '01_nse_pv/01_api')
+http_obj = None
 
 ''' --------------------------------------------------------------------------------------- '''
-def get_raw_hpv_for_year(symbol, year, verbose=False):
+def get_raw_hpv_for_year(symbol, year, overwrite=False, verbose=False):
     date_today = datetime.date.today()
     output_filename = os.path.join(OUTPUT_DIR, f'{symbol}/raw', f'{year}.csv')
 
     if verbose:
         print('For %s for year %d ...' % (symbol, year), end=' ')
     if date_today.year != year and os.path.exists(output_filename):
-        if verbose:
-            print('data already downloaded')
-        return
+        if overwrite:
+            if verbose:
+                print('some data exists, overwriting!')
+        else:
+            if verbose:
+                print('data already downloaded')
+            return
 
     from_date = datetime.date(year, 1, 1)
     end_date = date_today if year == date_today.year else datetime.date(year, 12, 31)
 
+    global http_obj
+    if http_obj is None:
+        http_obj = http_utils.HttpDownloads(website='nse')
+
     results = []
-    http_obj = http_utils.HttpDownloads(website='nse')
     while from_date <= end_date:
         to_date = from_date + datetime.timedelta(100)
         if to_date > end_date:
@@ -74,18 +82,18 @@ def get_raw_hpv_for_year(symbol, year, verbose=False):
     print('  Retrieved for year %d --> %d rows, from / to: %s / %s' %
           (year, r_df.shape[0], r_df['CH_TIMESTAMP'].values[0], r_df['CH_TIMESTAMP'].values[-1]))
 
-
     if not os.path.exists(os.path.dirname(output_filename)):
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     r_df.to_csv(output_filename, index=False)
 
     return True
 
-def get_raw_hpv_clean_raw(symbol, from_year, verbose=False):
-    print('%s: Getting data ...' % symbol)
-    [get_raw_hpv_for_year(symbol, y, verbose)
-     for y in range(from_year, datetime.date.today().year + 1)]
+def get_raw_hpv_clean_raw(symbol, years, overwrite=False, verbose=False):
+    print('get_raw_hpv_clean_raw: %s for years %s' % (symbol, years))
+    """[get_raw_hpv_for_year(symbol, y, verbose)
+     for y in range(years, datetime.date.today().year + 1)]"""
 
+    [get_raw_hpv_for_year(symbol, y, overwrite=overwrite, verbose=verbose) for y in years]
     raw_files = glob.glob(os.path.join(OUTPUT_DIR, f'{symbol}/raw/*.csv'))
     raw_data = pd.concat([pd.read_csv(f) for f in raw_files])
 
@@ -164,16 +172,18 @@ def get_pv_data(symbol, after=None, from_to=None, n_days=0):
 
     return df
 
-def wrapper(symbols=None, verbose=False):
-    """ Only .EQ supported right now """
+def wrapper(symbols=None, year=None, overwrite=False, verbose=False):
     if symbols is None:
-        symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
-                   'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
+        symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFCBANK', 'ICICIBANK', 'IRCON',
+                   'IRCTC', 'JUBLFOOD', 'NMDC', 'TATASTEEL', 'ZYDUSLIFE']
+
+    years = list(range(2018, datetime.date.today().year + 1)) if year is None else [year]
+
     for symbol in symbols:
-        raw_pv_data = get_raw_hpv_clean_raw(symbol, 2018, verbose=verbose)
+        raw_pv_data = get_raw_hpv_clean_raw(symbol, years, overwrite=overwrite, verbose=verbose)
         print('Loaded raw_pv_data.shape: %s, from / to: %s / %s' %
               (raw_pv_data.shape, raw_pv_data['Date'].values[0], raw_pv_data['Date'].values[-1]))
-        ca_mults = process_ca(raw_pv_data, verbose=verbose)
+        ca_mults = process_ca(raw_pv_data, verbose=False)  # use verbose only when there's a bug
         pv_data = pd.merge(raw_pv_data, ca_mults[['Date', 'mult']], on='Date', how='left')
         for c in ['Open', 'High', 'Low', 'Close', 'Prev Close', 'Last',
                   'VWAP', '52_Wk_H', '52_Wk_L']:
@@ -189,8 +199,16 @@ def wrapper(symbols=None, verbose=False):
 
 ''' --------------------------------------------------------------------------------------- '''
 if __name__ == '__main__':
-    verbose = False
+    from argparse import ArgumentParser
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument('-sy', nargs='+', help="nse symbols")
+    arg_parser.add_argument('-y', type=int, help="year")
+    arg_parser.add_argument('-o', action='store_true', help="overwrite if already downloaded")
+    arg_parser.add_argument('-v', action='store_true', help="verbose")
+    args = arg_parser.parse_args()
 
-    symbols = sys.argv[1:] if len(sys.argv) > 1 else ['ASIANPAINT', 'BRITANNIA']
+    if args.sy is None:
+        arg_parser.print_help()
+        print('\n--> args.sy is None. Will be using default set of symbols\n')
 
-    wrapper(symbols, verbose)
+    wrapper(symbols=args.sy, year=args.y, overwrite=args.o, verbose=args.v)

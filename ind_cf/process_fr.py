@@ -161,6 +161,8 @@ class ProcessCFFRs:
 
     def __what_to_process__(self):
         print('__what_to_process__: preparing self.frs_to_process')
+        if not os.path.exists(self.cf_fr_filename):
+            return pd.DataFrame()
         cf_frs = pd.read_csv(self.cf_fr_filename)
         cf_frs['filingDate'] = pd.to_datetime(cf_frs['filingDate'])
         cf_frs.sort_values(by='filingDate', inplace=True)

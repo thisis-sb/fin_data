@@ -24,8 +24,8 @@ def test_nse_spot(verbose=False):
 
     ''' ----------------------------------------------------------------------------------- '''
     print('NseSpotPVData basics:')
-    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
-               'JUBLFOOD', 'TATASTEEL', 'ZYDUSLIFE']
+    symbols = ['ASIANPAINT', 'BRITANNIA', 'HDFCBANK', 'ICICIBANK', 'IRCON', 'IRCTC',
+               'JUBLFOOD', 'NMDC', 'TATASTEEL', 'ZYDUSLIFE']
     nse_spot_obj = nse_spot.NseSpotPVData(verbose=False)
 
     def compare_dfs(symbol, df1, df2):
@@ -56,7 +56,7 @@ def test_nse_spot(verbose=False):
         return
 
     def check_data(symbol_list, dates):
-        print(f'  Checking for {dates}:', dates, end=' ')
+        print(f'  Checking for {dates}:', end=' ')
         for symbol in symbol_list:
             if verbose: print(f'\n  {symbol} ...', end=' ')
             df1 = nse_spot_obj.get_pv_data(symbol, series='EQ', from_to=dates)
@@ -66,23 +66,19 @@ def test_nse_spot(verbose=False):
         print('') if verbose else print('OK')
         return
 
-    end_date = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')
-    check_data(symbols, ['2018-01-01', '2018-12-31'])
-    check_data(symbols, ['2019-01-01', '2019-12-31'])
-    check_data(symbols, ['2020-01-01', '2020-12-31'])
-    check_data(symbols, ['2021-01-01', '2021-12-31'])
-    check_data(symbols, ['2022-01-01', '2022-12-31'])
-    check_data(symbols, ['2023-01-01', '2023-12-31'])
-    check_data(symbols, ['2024-01-01', end_date])
+    full_years = list(range(2018, datetime.today().year))
+    [check_data(symbols, [f'{y}-01-01', f'{y}-12-31']) for y in full_years]
+    latest_date = datetime.today().strftime('%Y-%m-%d')
+    check_data(symbols, [f'{datetime.today().year}-01-01', datetime.today().strftime('%Y-%m-%d')])
 
     ''' ----------------------------------------------------------------------------------- '''
     print('NseSpotPVData.get_pv_data (for multiple symbols):', end=' ')
     """ To do: Verify 52_Wk_H/L"""
-    multi_df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', end_date])
+    multi_df = nse_spot_obj.get_pv_data(symbols, from_to=['2018-01-01', latest_date])
     for symbol in symbols:
         if verbose: print(f'\n  {symbol} ...', end=' ')
         df1 = multi_df.loc[multi_df['Symbol'] == symbol].reset_index(drop=True)
-        df2 = get_hpv.get_pv_data(symbol, from_to=['2018-01-01', end_date])
+        df2 = get_hpv.get_pv_data(symbol, from_to=['2018-01-01', latest_date])
         compare_dfs(symbol, df1, df2)
         if verbose: print('OK', end='')
     print('') if verbose else print('OK')

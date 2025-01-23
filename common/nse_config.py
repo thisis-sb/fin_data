@@ -317,6 +317,9 @@ def download_cf_shp(year):
     print('CF_SHP: Downloading %s ...' % from_to, end='')
     http_obj = pyg_http_utils.HttpDownloads()
     cf_shp_json = http_obj.http_get_json(url)
+    if len(cf_shp_json) == 0:
+        print('Done. No shp data found')
+        return
     cf_shp_df = pd.DataFrame(cf_shp_json)
     cf_shp_df.reset_index(drop=True, inplace=True)
     cols = {

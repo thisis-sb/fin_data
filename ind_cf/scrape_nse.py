@@ -44,6 +44,10 @@ def get_nse_fr_filings(year):
             print('done, shape:', df.shape)
             res_df = pd.concat([res_df, df])
 
+    if res_df.shape[0] == 0:
+        print(f'  {year}: no fr filings found for the year')
+        return
+
     res_df.reset_index(drop=True, inplace=True)
     n_unique_xbrls = len(res_df['xbrl'].unique())
     print('Final cf_fr_df shape: %s, Unique XBRLs: %d' % (res_df.shape, n_unique_xbrls))
