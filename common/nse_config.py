@@ -73,6 +73,7 @@ def get_all_indices(verbose=False):
 
     ''' Step1: get components of all indices '''
     broad_indices = get_broad_indices()
+    print('  Sectoral indices:')
     for ix, row in idx_df.iterrows():
         pyg_misc.print_progress_str(ix + 1, idx_df.shape[0])
         symbol = row['Symbol']
@@ -101,7 +102,7 @@ def get_all_indices(verbose=False):
         idx_df.loc[ix, 'file_name'] = '%s.csv' % symbol
 
     idx_df.to_csv(os.path.join(PATH_2, 'all_nse_indices.csv'), index=False)
-    print('\nDone. %d indices, %d categories, %d indices with no symbols.'
+    print('\n  --> Done. %d sectoral indices, %d categories, %d indices with no symbols.'
           % (idx_df.shape[0], len(idx_df['category'].unique()),
              idx_df[idx_df['file_name'].isnull()].shape[0]))
 
@@ -138,7 +139,7 @@ def get_broad_indices():
     for ix in nse_config_dicts:
         for i, symbol in enumerate(ix['symbols']):
             url = ix['urls'][i]
-            print('Downloading %s: %s' % (symbol, os.path.basename(url)) , end=' ... ')
+            print('  %s: %s:' % (symbol, os.path.basename(url)) , end=' ')
             df = pd.read_csv(url)
             df.rename(columns=ix['column_map'], inplace=True)
             df = df[list(ix['column_map'].values())]
