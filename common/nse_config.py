@@ -53,7 +53,7 @@ def get_all_symbols():
             print('Done, shape:', df.shape)
     return
 
-def get_all_indices(verbose=False):
+def get_all_indices(full, verbose=False):
     print('Downloading index components ...')
     if verbose:
         import json
@@ -73,6 +73,9 @@ def get_all_indices(verbose=False):
 
     ''' Step1: get components of all indices '''
     broad_indices = get_broad_indices()
+    if not full:
+        return
+
     print('  Sectoral indices:')
     for ix, row in idx_df.iterrows():
         pyg_misc.print_progress_str(ix + 1, idx_df.shape[0])
@@ -346,11 +349,11 @@ def download_cf_shp(year):
 
 def get_all(full=False, verbose=False):
     get_all_symbols()
-    if full: get_all_indices()
+    get_all_indices(full=full)
     if full: get_etf_list()
     get_symbol_changes()
     if full: get_misc()
-    if full: prepare_symbols_master()
+    prepare_symbols_master()
     return True
 
 ''' --------------------------------------------------------------------------------------- '''

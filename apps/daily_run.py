@@ -94,7 +94,9 @@ def e2e_ind_cf(run_tests=True):
 if __name__ == '__main__':
     opt = None if len(sys.argv) == 1 else sys.argv[1]
 
-    if opt == 'nse_pv':
+    if opt == 'common':
+        nse_config.get_all(full=True)
+    elif opt == 'nse_pv':
         e2e_nse_common(full=False)
         e2e_nse_pv()
     elif opt == 'ind_cf':
@@ -105,4 +107,4 @@ if __name__ == '__main__':
         e2e_nse_pv()
         e2e_ind_cf()
     else:
-        print('\nERROR! Bad options. Usage: nse_pv | ind_cf | all')
+        print('\nERROR! Bad options. Usage: common | nse_pv | ind_cf | all')
