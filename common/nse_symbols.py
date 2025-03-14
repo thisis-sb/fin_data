@@ -15,6 +15,9 @@ PATH_2 = os.path.join(DATA_ROOT, '00_common/02_nse_indices')
 
 ''' --------------------------------------------------------------------------------------- '''
 def get_symbols(indices, series=None, sector=None):
+    assert type(indices) == str or type(indices) == list
+    if type(indices) == str:
+        indices = [indices]
     idx_list = pd.read_csv(os.path.join(PATH_2, 'all_nse_indices.csv'))
     idx_list = idx_list.loc[idx_list['Symbol'].isin(indices)]
     file_list = idx_list['file_name'].unique()
